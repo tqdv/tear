@@ -175,12 +175,6 @@ let error: ValRet<&str, &str> = Ret("error");
 ```
 */
 impl<V, R> ValRet<V, R> {
-	/// Optimization (?) for the Return trait
-	#[inline]
-	pub fn valret (self) -> Self {
-		self
-	}
-	
 	/** Returns a new ValRet where we map the old Ret to the new Ret using the function supplied
 	
 	```rust
@@ -383,14 +377,14 @@ It also happens that "tear" looks like "ret(urn)" backwards.
 #[macro_export]
 macro_rules! tear {
 	// `tear! { $e }`
-	($e:expr) => {
+	( $e:expr ) => {
 		match ::tear::Return::valret($e) {
 			::tear::ValRet::Val(v) => v,
 			::tear::ValRet::Ret(r) => return r,
 		}
 	};
 	// With a mapping function eg. `tear! { $e => |v| v }` or `tear! { $e => func }`
-	($e:expr => $f:expr) => {
+	( $e:expr => $f:expr ) => {
 		{
 			#[allow(clippy::redundant_closure_call)]
 			match ::tear::Return::valret($e) {
@@ -698,11 +692,11 @@ fn open_file(path: PathBuf) -> Result<(), Error> {
 #[macro_export]
 macro_rules! rip {
 	// `rip! { $e }`
-	($e:expr) => {
+	( $e:expr ) => {
 		tear! { ::tear::Judge::into_moral($e).ret_error() }
 	};
 	// With a mapping function eg. `rip! { $e => |v| v }` or `rip! { $e => func }`
-	($e:expr => $f:expr) => {
+	( $e:expr => $f:expr ) => {
 		{
 			#[allow(clippy::redundant_closure_call)]
 			match ::tear::Judge::into_moral($e) {
@@ -729,7 +723,7 @@ The mnemonic was "When you need to scream an error from the inside" because of h
 */
 #[macro_export]
 macro_rules! terror {
-	($e:expr => $f:expr) => {
+	( $e:expr => $f:expr ) => {
 		{
 			#[allow(clippy::redundant_closure_call)]
 			match ::tear::Judge::into_moral($e) {
@@ -751,7 +745,7 @@ Just write `fear! { $e => $f }` instead of `tear! { $e => $f }`.
 */
 #[macro_export]
 macro_rules! fear {
-	($e:expr => $f:expr) => {
+	( $e:expr => $f:expr ) => {
 		tear! { $e => $f }
 	}
 }
