@@ -1,0 +1,15 @@
+[package]
+name = "tear"
+description = "Typed early returns and syntax sugar macros for try!-like error handling"
+version = "0.1.0"
+authors = ["Tilwa Qendov <tilwa.qendov@gmail.com>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+
+readme = "README.md"
+keywords = ["early", "return", "try", "syntax", "error"]
+categories = ["rust-patterns"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
