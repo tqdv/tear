@@ -7,6 +7,7 @@ edition = "2018"
 license = "MIT OR Apache-2.0"
 
 readme = "README.md"
+repository = "https://github.com/tqdv/tear/"
 keywords = ["early", "return", "try", "syntax", "error"]
 categories = ["rust-patterns"]
 
