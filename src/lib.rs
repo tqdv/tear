@@ -1,11 +1,12 @@
 /*! Typed early returns and syntax sugar macros for try!-like error handling
 
+*Works with Rust v1.34+*
+
 # Description
 
 This crate exports the `tear!` and `rip!` macros.
 
 `tear!` is used with `ValRet` for typed early returns. `rip!` is syntax-sugar for `try!` or the `?` operator.
-
 
 # Usage
 

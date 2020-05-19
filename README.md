@@ -2,12 +2,13 @@
 
 > Typed early returns and syntax sugar macros for try!-like error handling
 
+*Works with Rust v1.34+*
+
 ## Description
 
 This crate exports the `tear!` and `rip!` macros.
 
 `tear!` is used with `ValRet` for typed early returns. `rip!` is syntax-sugar for `try!` or the `?` operator.
-
 
 ## Usage
 
@@ -87,6 +88,6 @@ let path = rip! { find_config_file() => Error::FindPathF };
 
 ## License
 
-Licensed under either of Apache License, Version 2.0 or MIT license at your option.
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT license](LICENSE-MIT) at your option.
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this crate by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
