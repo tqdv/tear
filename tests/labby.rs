@@ -160,3 +160,45 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 	assert_eq![ v, 7 ]; println!("2/3");
 	assert_eq![ c, 4 ]; println!("3/3");
 }
+
+#[test] fn anybox () {
+	use tear::anybox;
+	
+	struct S { d :i32 }
+	
+	let x = anybox!(S { d: 5 });
+	let s = match x.downcast::<S>() {
+		Ok(v) => *v,
+		_ => panic!("Failed to get our S back"),
+	};
+	
+	assert_eq![ s.d, 5 ];
+}
+
+#[test] fn box_breakval () {
+	use tear::anybox;
+	
+	struct S { d: String }
+	
+	let mut i = 0;
+	let mut f = || {
+		let ii = i;
+		i += 1;
+		if ii == 0 { Looping::BreakVal { label: Some(1), value: anybox!(2) } }
+		else if ii == 1 { Looping::BreakVal { label: Some(2), value: anybox!("yeah".to_string()) } }
+		else { Looping::Break { label: Some(0) } }
+	};
+	
+	'a: loop {
+		let b = 'b: loop {
+			let c = 'c: loop {
+				loop {
+					twist! { -box -labby 'a, 'b :i32, 'c :String | f() }
+					break;
+				}
+			};
+			assert_eq![ c, "yeah".to_string() ]; println!("1/2");
+		};
+		assert_eq![ b, 2 ]; println!("2/2");
+	}
+}

@@ -98,7 +98,7 @@ let path = rip! { find_config_file() => Error::FindPathF };
 // Documentation lints FIXME: reenable them
 //#![warn(missing_docs)]
 //#![warn(missing_doc_code_examples)]
-#[cfg(any(test, doctest))] pub mod test;
+
 pub mod prelude;
 mod trait_impl; // Move the trait implementions as they are quite noisy
 
@@ -305,6 +305,8 @@ pub const BREAKVAL_IN_NOT_LOOP :&str = "error[E0571]: `break` with value is inva
 
 pub const BREAK_WITHOUT_VAL :&str = "error[E0308]: mismatched types. Breaking without a value when using `twist { -val`. Use BreakVal instead of Break, or use `twist!` without `-val`";
 
+pub const BAD_BREAKVAL_TYPE :&str = "error[E0308]: mismatched types. Looping::BreakVal has a value different from the loop it's breaking from. Check you're breaking from the right loop, or use Break instead of BreakVal.";
+
 // FIXME: replace () by an error message ?
 #[macro_export]
 macro_rules! resume {
@@ -324,6 +326,18 @@ macro_rules! last {
 }
 
 #[macro_export]
+macro_rules! anybox {
+	( $e:expr ) => {
+		{
+			let v = $e;
+			let b = Box::new(v);
+			let x = b as Box<dyn std::any::Any>;
+			x
+		}
+	}
+}
+
+#[macro_export]
 macro_rules! unit {
 	( $($whatever:tt)* ) => { () }
 }
@@ -338,24 +352,6 @@ macro_rules! __impl_twist {
 	// Process a single label
 	( @number $count:expr, $label:lifetime $($rest:lifetime)* => $e:expr => $($nls:tt)* ) => {
 		$crate::__impl_twist! { @number $count + 1, $($rest)* => $e => $($nls)* ($count => $label) }
-	};
-	// Parse the the labels and separate them into those that break with a value and those that don't
-	// breaks = ($count, $label) and bvals = ($count, $label, $type)
-	// nothing left to parse
-	( @number-and-parse $count:expr, => $e:expr => [$($breaks:tt)*] [$($bvals:tt)*] ) => {
-		stringify! { [$($breaks)*] [$($bvals)*] }
-	};
-	// parse `$lifetime of $type`
-	( @number-and-parse $count:expr, $label:lifetime of $type:ty, $($rest:tt)* => $e:expr => [$($breaks:tt)*] [$($bvals:tt)*] ) => {
-		$crate::__impl_twist! { @number $count + 1, $($rest)* => $e => [$($breaks)*] [ $($bvals)* ($count, $label, $type) ] }
-	};
-	// parse `$lifetime`
-	( @number-and-parse $count:expr, $label:lifetime, $($rest:tt)* => $e:expr => [$($breaks:tt)*] [$($bvals:tt)*] ) => {
-		$crate::__impl_twist! { @number $count + 1, $($rest)* => $e => [ $($breaks)* ($count, $label) ] [$($bvals)*] }
-	};
-	// ignore empty fields
-	( @number-and-parse $count:expr, , $($rest:tt)* => $e:expr => [$($breaks:tt)*] [$($bvals:tt)*] ) => {
-		$crate::__impl_twist! { @number $count + 1, $($rest)* => $e => [$($breaks)*] [$($bvals)*] }
 	};
 	
 	// Get everything up until `|`
@@ -410,21 +406,25 @@ macro_rules! twist {
 	// About labby flags: we simulate booleans with empty or non empty token trees.
 	//   However, we can only do something when it's full, which is why we have a boolean for each possibility
 	//   Currently, we test if the innermost loop breaks with a value or not
+	// flags are
+	// - do we unbox ? if so, "unbox"
+	// - do we have an innermost single break ? if so "break"
+	// - do we have an innermost value break ? if so, the break value type
+	
 	// Handle a Looping object that can break with labels, and break with a value
 	// eg. `'a 'b: i32 | $e`
 	( -labby $($tokens:tt)* ) => {
-		$crate::__impl_twist! { @parse-labby (("break") ()) [$($tokens)*] -> }
+		$crate::__impl_twist! { @parse-labby (() ("break") ()) [$($tokens)*] -> }
 		//$crate::__impl_twist! { @number-and-parse 0, $($tokens)* => $e => [] [] }
 	};
 	// The innermost loop breaks with a value
 	( -val $type:ty, -labby $($tokens:tt)* ) => {
-		$crate::__impl_twist! { @parse-labby (() ($type)) [$($tokens)*] -> }
+		$crate::__impl_twist! { @parse-labby (() () ($type)) [$($tokens)*] -> }
 		//$crate::__impl_twist! { @number-and-parse 0, $($tokens)* => $e => [] [] }
 	};
 	// This only works with one label type because the expression has a specific type
 	// We handle Break and BreakVal for when we break or breakval the innermost loop twice (2 cases)
-	// IDEA: make breaking the current loop opt-in as an option
-	( @labels-and-types (($($bk:tt)*) ($($bv:ty)?) ) ($( ($c:expr, $l:lifetime) )*) ($( ($count:expr, $label:lifetime, $type:ty) )*) $e:expr ) => {
+	( @labels-and-types (() ($($bk:tt)*) ($($bv:ty)?) ) ($( ($c:expr, $l:lifetime) )*) ($( ($count:expr, $label:lifetime, $type:ty) )*) $e:expr ) => {
 		match $e {
 			$crate::Looping::Resume(v) => v,
 			$( $crate::Looping::Break { label: None } => { $crate::unit!($bk); break; }, )?
@@ -450,6 +450,60 @@ macro_rules! twist {
 			$crate::Looping::BreakVal $(::<_, $bv> )? { label: Some(l), value: v } => {
 				match l {
 					$( x if x == $count => { break $label v; }, )*
+					_ => panic!("Invalid label index in Looping::BreakVal object."),
+				};
+			},
+		};
+	};
+	// Same entry points, but we add the -box flag
+	( -box -labby $($tokens:tt)* ) => {
+		$crate::__impl_twist! { @parse-labby (("unbox") ("break") ()) [$($tokens)*] -> }
+	};
+	// The innermost loop breaks with a value
+	( -box -val $type:ty, -labby $($tokens:tt)* ) => {
+		$crate::__impl_twist! { @parse-labby (("unbox") () ($type)) [$($tokens)*] -> }
+	};
+	// This unboxes and casts the expression
+	( @labels-and-types (("unbox") ($($bk:tt)*) ($($bv:ty)?) ) ($( ($c:expr, $l:lifetime) )*) ($( ($count:expr, $label:lifetime, $type:ty) )*) $e:expr ) => {
+		match $e {
+			$crate::Looping::Resume(v) => v,
+			$( $crate::Looping::Break { label: None } => { $crate::unit!($bk); break; }, )?
+			$( $crate::Looping::Break { label: None } => { $crate::unit!($bv); panic!($crate::BREAK_WITHOUT_VAL) }, )?
+			$crate::Looping::Break { label: Some(l) } => {
+				match l {
+					$( x if x == $c => { break $l; }, )*
+					_ => panic!("Invalid label index in Looping::Break object."),
+				};
+			},
+			$crate::Looping::Continue { label: None } => continue,
+			$crate::Looping::Continue { label: Some(l) } => {
+				match l {
+					$( x if x == $c => { continue $l; }, )*
+					$( x if x == $count => { continue $label; }, )*
+					_ => panic!("Invalid label index in Looping::Continue object."),
+				};
+			},
+			$( $crate::Looping::BreakVal { label: None, .. } => { $crate::unit!($bk); panic!($crate::BREAKVAL_IN_NOT_LOOP); }, )?
+			// The following statements contain the differences compared to the non-unboxing version
+			$( $crate::Looping::BreakVal { label: None, value: v } => {
+				match v.downcast::<$bv>() {
+					Ok(v) => { break *v; },
+					_ => panic!(format!("At label None with type {}: {}", stringify!($bv), $crate::BAD_BREAKVAL_TYPE)),
+				};
+			}, )?
+			// Add explicit breakval type when it can't be infered by the labeled breaksvals
+			// (because there aren't any) but we do breakval the innermost loop
+			$crate::Looping::BreakVal $(::<_, $bv> )? { label: Some(l), value: v } => {
+				match l {
+					$( x if x == $count => {
+						match v.downcast::<$type>() {
+							Ok(v) => { break $label *v; }, // We got a ref so dereference it
+							_ => panic!(format!("At label {} with type {}: {}",
+								stringify!($label),
+								stringify!($type),
+								$crate::BAD_BREAKVAL_TYPE)),
+						}
+					}, )*
 					_ => panic!("Invalid label index in Looping::BreakVal object."),
 				};
 			},
