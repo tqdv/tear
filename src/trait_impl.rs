@@ -78,7 +78,9 @@ impl<Y, N> Judge for Moral<Y, N> {
 // Implementation of Return for those that implement Judge
 
 /// Automatic implementation of Return for types that can convert to Moral (Judge trait)
-impl<T, E, Me> Return<T, E> for Me where Me :Judge<Positive = T, Negative = E> + Sized {
+impl<T, E, Me> Return for Me where Me :Judge<Positive = T, Negative = E> {
+	type Value = T;
+	type Returned = E;
 	fn valret (self) -> ValRet<T, E> {
 		self.into_moral().into_valret()
 	}

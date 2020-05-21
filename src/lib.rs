@@ -95,10 +95,10 @@ let path = rip! { find_config_file() => Error::FindPathF };
 
 */
 
-// Documentation lints
-#![warn(missing_docs)]
-#![warn(missing_doc_code_examples)]
-
+// Documentation lints FIXME: reenable them
+//#![warn(missing_docs)]
+//#![warn(missing_doc_code_examples)]
+#[cfg(any(test, doctest))] pub mod test;
 pub mod prelude;
 mod trait_impl; // Move the trait implementions as they are quite noisy
 
@@ -106,10 +106,6 @@ mod trait_impl; // Move the trait implementions as they are quite noisy
 
 IDEA: Replace tear_if! with implementing Judge on bool,
 so that tear!{ cond => |_| do_stuff() } works
-
-IDEA: Merge tear and fear into one, and rip and terror.
-Pro: it's more memorable
-Con: … none really ?
 
 IDEA: also implement typed loop control
 Pro: Consistent with the rest
@@ -121,15 +117,9 @@ See:
 NB: You'll need proc_macro to handle breaking and continuing loops with labels (?)
 So I guess that would be another crate
 
-IDEA: Allow trailing semicolon in blocks, and return () instead.
-
 IDEA: Check that the combinators are actually being used
 
 FIXME: inconsistencies between when to use ValRet and Moral
-
-IDEA: Implement Judge on bool, and dissociate what get automatically implemented as Return
-
-IDEA: Add error messages when there's a trailing colon, or the return type is incorrect
 
 Useful ressources:
 - <https://stackoverflow.com/questions/40302026/what-does-the-tt-metavariable-type-mean-in-rust-macros>
@@ -217,9 +207,14 @@ impl<V, R> ValRet<V, R> {
 }
 
 /// The ability to coerce to a ValRet and be used with the tear! macro
-pub trait Return<T, R> where Self :Sized {		
+pub trait Return where Self :Sized {
+	/// The Val in ValRet
+	type Value;
+	/// The Ret in ValRet
+	type Returned;
+	
 	/// Convert itself to a ValRet
-	fn valret(self) -> ValRet<T, R>;
+	fn valret(self) -> ValRet<Self::Value, Self::Returned>;
 }
 
 /// A notion of good and bad for the rip! macro
@@ -292,6 +287,237 @@ pub trait Judge {
 	For example `Result::Err(e)` and `Judge::from_bad(e)` are equivalent. Useful for converting types.
 	*/
 	fn from_bad (v :Self::Negative) -> Self;
+}
+
+pub enum Looping<T, B> {
+	Resume(T),
+	Break { label: Option<usize> },
+	BreakVal { label: Option<usize>, value: B },
+	Continue { label: Option<usize> }
+}
+
+#[allow(non_camel_case_types)]
+pub struct Error0571__Tried_to_break_with_value_using_twist_without_val_flag__Use_Break_instead_of_BreakVal_or_add_the_dash_val_flag_to_twist();
+
+pub type BreakValError = Error0571__Tried_to_break_with_value_using_twist_without_val_flag__Use_Break_instead_of_BreakVal_or_add_the_dash_val_flag_to_twist;
+
+pub const BREAKVAL_IN_NOT_LOOP :&str = "error[E0571]: `break` with value is invalid in a `for` or `while` loop. Use Break instead of BreakVal in `twist!` expression or use `twist!` with the `-val` flag.";
+
+pub const BREAK_WITHOUT_VAL :&str = "error[E0308]: mismatched types. Breaking without a value when using `twist { -val`. Use BreakVal instead of Break, or use `twist!` without `-val`";
+
+// FIXME: replace () by an error message ?
+#[macro_export]
+macro_rules! resume {
+	( $($value:tt)* ) => { $crate::Looping::Resume::<_, ()> ($($value)*) }
+}
+
+#[macro_export]
+macro_rules! next {
+	( None ) => { $crate::Looping::Continue::<_, ()> { label: None } };
+	( $id:expr ) => { $crate::Looping::Continue::<_, ()> { label: Some($id) } };
+}
+
+#[macro_export]
+macro_rules! last {
+	( None ) => { $crate::Looping::Break::<_, ()> { label: None } };
+	( $id:expr ) => { $crate::Looping::Break::<_, ()> { label: Some($id) } };
+}
+
+#[macro_export]
+macro_rules! unit {
+	( $($whatever:tt)* ) => { () }
+}
+
+#[macro_export]
+macro_rules! __impl_twist {
+	// Numbering the labels by using a counter. (nls = numbered labels)
+	// Nothing left to process
+	( @number $count:expr, => $e:expr => $($nls:tt)* ) => {
+		twist! { @numbered-labels $($nls)* => $e }
+	};
+	// Process a single label
+	( @number $count:expr, $label:lifetime $($rest:lifetime)* => $e:expr => $($nls:tt)* ) => {
+		$crate::__impl_twist! { @number $count + 1, $($rest)* => $e => $($nls)* ($count => $label) }
+	};
+	// Parse the the labels and separate them into those that break with a value and those that don't
+	// breaks = ($count, $label) and bvals = ($count, $label, $type)
+	// nothing left to parse
+	( @number-and-parse $count:expr, => $e:expr => [$($breaks:tt)*] [$($bvals:tt)*] ) => {
+		stringify! { [$($breaks)*] [$($bvals)*] }
+	};
+	// parse `$lifetime of $type`
+	( @number-and-parse $count:expr, $label:lifetime of $type:ty, $($rest:tt)* => $e:expr => [$($breaks:tt)*] [$($bvals:tt)*] ) => {
+		$crate::__impl_twist! { @number $count + 1, $($rest)* => $e => [$($breaks)*] [ $($bvals)* ($count, $label, $type) ] }
+	};
+	// parse `$lifetime`
+	( @number-and-parse $count:expr, $label:lifetime, $($rest:tt)* => $e:expr => [$($breaks:tt)*] [$($bvals:tt)*] ) => {
+		$crate::__impl_twist! { @number $count + 1, $($rest)* => $e => [ $($breaks)* ($count, $label) ] [$($bvals)*] }
+	};
+	// ignore empty fields
+	( @number-and-parse $count:expr, , $($rest:tt)* => $e:expr => [$($breaks:tt)*] [$($bvals:tt)*] ) => {
+		$crate::__impl_twist! { @number $count + 1, $($rest)* => $e => [$($breaks)*] [$($bvals)*] }
+	};
+	
+	// Get everything up until `|`
+	( @parse-labby ($($flag:tt)*) [ | $($rest:tt)* ] -> $($l:tt)* ) => {
+		$crate::__impl_twist! { @labby-expr ($($flag)*) [$($rest)*] -> $($l)* }
+	};
+	( @parse-labby ($($flag:tt)*) [ $token:tt $($rest:tt)* ] -> $($l:tt)* ) => {
+		$crate::__impl_twist! { @parse-labby ($($flag)*) [$($rest)*] -> $($l)* $token }
+	};
+	// There is no `|`: There's only an expression
+	( @parse-labby ($($flag:tt)*) [ ] -> $($rest:tt)* ) => {
+		compile_error!("Missing `|` separator after labels in `twist! -labby` macro invocation. Add labels, or use `twist!` without `-labby`.")
+	};
+	
+	// Parse the expression, or fail
+	( @labby-expr ($($flag:tt)*) [ $e:expr ] -> $($l:tt)* ) => {
+		// We add an extra comma, so that every label ends with a comma, simplifies parsing
+		$crate::__impl_twist! { @labby-labels ($($flag)*) 0, [$($l)* ,] -> [() ()] $e }
+	};
+	// Bad expression
+	( @labby-expr ($($flag:tt)*) [ $($rest:tt)* ] $($whatever:tt)* ) => {
+		compile_error!(concat!("This failed to parse as an expression: "), stringify!($($rest)*))
+	};
+	// Parse labels (eg. `'a` or `'a: i32`) separated with commas and separate those that
+	// break with values and those that don't.
+	// Break = bk and BreakVal = bv
+	// Nothing left to parse
+	( @labby-labels ($($flag:tt)*) $count:expr, [] -> [($($bk:tt)*) ($($bv:tt)*)] $e:expr ) => {
+		twist! { @labels-and-types ($($flag)*) ($($bk)*) ($($bv)*) $e }
+		// stringify!($($bk)* $($bv)* $e)
+	};
+	// Parse `'a: i32,` FIXME
+	( @labby-labels ($($flag:tt)*) $count:expr, [ $label:lifetime : $type:ty , $($rest:tt)* ] -> [($($bk:tt)*) ($($bv:tt)*)] $e:expr ) => {
+		$crate::__impl_twist! { @labby-labels ($($flag)*) $count + 1, [$($rest)*] -> [($($bk)*) ( $($bv)* ($count, $label, $type) )] $e }
+	};
+	// Parse `'a,`
+	( @labby-labels ($($flag:tt)*) $count:expr, [ $label:lifetime , $($rest:tt)* ] -> [($($bk:tt)*) ($($bv:tt)*)] $e:expr ) => {
+		$crate::__impl_twist! { @labby-labels ($($flag)*) $count + 1, [$($rest)*] -> [( $($bk)* ($count, $label) ) ($($bv)*)] $e }
+	};
+	// Bad input
+	( @labby-labels ($($flag:tt)*) $count:expr, [ $($rest:tt)* ] -> [($($bk:tt)*) ($($bv:tt)*)] $e:expr ) => {
+		compile_error!(concat!("Bad label syntax: ", stringify!($($rest)*)))
+	};
+}
+
+// FIXME: what about loops labels that can break with values ?
+
+// On BreakValError: We force the break value to be a type that no one creates,
+// so that it is a compile error when we try to break with a value
+#[macro_export]
+macro_rules! twist {
+	// About labby flags: we simulate booleans with empty or non empty token trees.
+	//   However, we can only do something when it's full, which is why we have a boolean for each possibility
+	//   Currently, we test if the innermost loop breaks with a value or not
+	// Handle a Looping object that can break with labels, and break with a value
+	// eg. `'a 'b: i32 | $e`
+	( -labby $($tokens:tt)* ) => {
+		$crate::__impl_twist! { @parse-labby (("break") ()) [$($tokens)*] -> }
+		//$crate::__impl_twist! { @number-and-parse 0, $($tokens)* => $e => [] [] }
+	};
+	// The innermost loop breaks with a value
+	( -val $type:ty, -labby $($tokens:tt)* ) => {
+		$crate::__impl_twist! { @parse-labby (() ($type)) [$($tokens)*] -> }
+		//$crate::__impl_twist! { @number-and-parse 0, $($tokens)* => $e => [] [] }
+	};
+	// This only works with one label type because the expression has a specific type
+	// We handle Break and BreakVal for when we break or breakval the innermost loop twice (2 cases)
+	// IDEA: make breaking the current loop opt-in as an option
+	( @labels-and-types (($($bk:tt)*) ($($bv:ty)?) ) ($( ($c:expr, $l:lifetime) )*) ($( ($count:expr, $label:lifetime, $type:ty) )*) $e:expr ) => {
+		match $e {
+			$crate::Looping::Resume(v) => v,
+			$( $crate::Looping::Break { label: None } => { $crate::unit!($bk); break; }, )?
+			$( $crate::Looping::Break { label: None } => { $crate::unit!($bv); panic!($crate::BREAK_WITHOUT_VAL) }, )?
+			$crate::Looping::Break { label: Some(l) } => {
+				match l {
+					$( x if x == $c => { break $l; }, )*
+					_ => panic!("Invalid label index in Looping::Break object."),
+				};
+			},
+			$crate::Looping::Continue { label: None } => continue,
+			$crate::Looping::Continue { label: Some(l) } => {
+				match l {
+					$( x if x == $c => { continue $l; }, )*
+					$( x if x == $count => { continue $label; }, )*
+					_ => panic!("Invalid label index in Looping::Continue object."),
+				};
+			},
+			$( $crate::Looping::BreakVal { label: None, .. } => { $crate::unit!($bk); panic!($crate::BREAKVAL_IN_NOT_LOOP); }, )?
+			$( $crate::Looping::BreakVal { label: None, value: v } => { $crate::unit!($bv); break v; }, )?
+			// Add explicit breakval type when it can't be infered by the labeled breaksvals
+			// (because there aren't any) but we do breakval the innermost loop
+			$crate::Looping::BreakVal $(::<_, $bv> )? { label: Some(l), value: v } => {
+				match l {
+					$( x if x == $count => { break $label v; }, )*
+					_ => panic!("Invalid label index in Looping::BreakVal object."),
+				};
+			},
+		};
+	};
+	// Handle a Looping object that can break with a label id eg. `'a 'b | $e`
+	// The comma between labels is optional
+	// This eventually calls @numbered-labels
+	( -label $($l:lifetime $(,)? )* | $e:expr ) => {
+		$crate::__impl_twist! { @number 0, $($l)* => $e => }
+	};
+	// Handle numbered labels eg. `0 => 'a 1 => 'b => $e`
+	( @numbered-labels $( ($count:expr => $label:lifetime) )* => $e:expr ) => {
+		match $e {
+			Looping::Resume::<_, ::tear::BreakValError>(v) => v,
+			Looping::Break { label: None } => break,
+			Looping::Break { label: Some(l) } => match l {
+				$( x if x == $count => break $label, )*
+				_ => panic!("Invalid label index in Looping::Break object."),
+			},
+			Looping::Continue { label: None } => continue,
+			Looping::Continue { label: Some(l) } => match l {
+				$( x if x == $count => continue $label, )*
+				_ => panic!("Invalid label index in Looping::Continue object."),
+			},
+			Looping::BreakVal { .. } => panic!($crate::BREAKVAL_IN_NOT_LOOP),
+		}
+	};
+	// Handle a Looping object
+	( $e:expr ) => {
+		match $e {
+			Looping::Resume::<_, ::tear::BreakValError>(v) => v,
+			Looping::Break { .. } => break,
+			Looping::Continue { .. } => continue,
+			// Looping::BreakVal { value: v, .. } => break v, // Uncomment to see the original error message
+			Looping::BreakVal { .. } => panic!($crate::BREAKVAL_IN_NOT_LOOP),
+		}
+	};
+	// Handle a Looping object that breaks a specific label
+	( -with $l:lifetime | $e:expr ) => {
+		match $e {
+			Looping::Resume::<_, ::tear::BreakValError>(v) => v,
+			Looping::Break { .. } => break $l,
+			Looping::Continue { .. } => continue $l,
+			// Looping::BreakVal { value: v, .. } => break v, // Uncomment to see the original error message
+			Looping::BreakVal { .. } => panic!($crate::BREAKVAL_IN_NOT_LOOP),
+		}
+	};
+	// Handle a Looping object that can break with a value
+	( -val $e:expr ) => {
+		match $e {
+			Looping::Resume(v) => v,
+			Looping::BreakVal { value: v, .. } => break v,
+			Looping::Continue { .. } => continue,
+			// Looping::Break { .. } => break (), // Uncomment to see the original error message
+			Looping::Break { .. } => panic!($crate::BREAK_WITHOUT_VAL),
+		}
+	};
+	// Handle a Looping object that can break with a value for a specific label
+	( -val -with $l:lifetime | $e:expr ) => {
+		match $e {
+			Looping::Resume(v) => v,
+			Looping::BreakVal { value: v, .. } => break $l v,
+			Looping::Continue { .. } => continue $l,
+			// Looping::Break { .. } => break (), // Uncomment to see the original error message
+			Looping::Break { .. } => panic!($crate::BREAK_WITHOUT_VAL),
+		}
+	};
 }
 
 /** Turns a ValRet into a value or an early return
@@ -389,7 +615,7 @@ macro_rules! tear {
 			#[allow(clippy::redundant_closure_call)]
 			match ::tear::Return::valret($e) {
 				::tear::ValRet::Val(v) => v,
-				::tear::ValRet::Ret(v) => return (($f)(v)),
+				::tear::ValRet::Ret(v) => return ($f(v)),
 			}
 		}
 	}
@@ -463,26 +689,26 @@ assert_eq![ add_five(None), 0 ];
 */
 #[macro_export]
 macro_rules! tear_if {
-	// Handle tear_if! { let ,… }
-	( let $p:pat = $e:expr, $($b:expr);* ) => {
+	// Normal tear_if! { $cond, $block }
+	( $c:expr $( , $($b:tt)* )? ) => {
 		tear! {
-			if let $p = $e {
-				::tear::ValRet::Ret({ $($b);* })
+			if $c {
+				::tear::ValRet::Ret({ $($($b)*)? })
 			} else {
 				::tear::ValRet::Val(())
 			}
 		}
 	};
-	// Normal if
-	( $c:expr, $($b:expr);* ) => {
+	// Handle tear_if! { let … }
+	( let $p:pat = $e:expr $( , $($b:tt)* )? ) => {
 		tear! {
-			if $c {
-				::tear::ValRet::Ret({ $($b);* })
+			if let $p = $e {
+				::tear::ValRet::Ret({ $($($b)*)? })
 			} else {
 				::tear::ValRet::Val(())
 			}
 		}
-	}
+	};
 }
 
 /** try!-like error-handling macro
@@ -701,7 +927,7 @@ macro_rules! rip {
 			#[allow(clippy::redundant_closure_call)]
 			match ::tear::Judge::into_moral($e) {
 				::tear::Moral::Good(v) => v,
-				::tear::Moral::Bad(v) => return ::tear::Judge::from_bad(($f)(v)),
+				::tear::Moral::Bad(v) => return ::tear::Judge::from_bad($f(v)),
 			}
 		}
 	}
@@ -724,13 +950,7 @@ The mnemonic was "When you need to scream an error from the inside" because of h
 #[macro_export]
 macro_rules! terror {
 	( $e:expr => $f:expr ) => {
-		{
-			#[allow(clippy::redundant_closure_call)]
-			match ::tear::Judge::into_moral($e) {
-				::tear::Moral::Good(v) => v,
-				::tear::Moral::Bad(v) => return ::tear::Judge::from_bad(($f)(v)),
-			}
-		}
+		rip! { $e => $f }
 	}
 }
 
