@@ -342,6 +342,8 @@ macro_rules! unit {
 	( $($whatever:tt)* ) => { () }
 }
 
+#[macro_export] macro_rules! bool { ( $($whatever:tt)* ) => { false } }
+
 #[macro_export]
 macro_rules! __impl_twist {
 	// Numbering the labels by using a counter. (nls = numbered labels)
@@ -532,44 +534,36 @@ macro_rules! twist {
 			Looping::BreakVal { .. } => panic!($crate::BREAKVAL_IN_NOT_LOOP),
 		}
 	};
+	
 	// Handle a Looping object
 	( $e:expr ) => {
-		match $e {
-			Looping::Resume::<_, ::tear::BreakValError>(v) => v,
-			Looping::Break { .. } => break,
-			Looping::Continue { .. } => continue,
-			// Looping::BreakVal { value: v, .. } => break v, // Uncomment to see the original error message
-			Looping::BreakVal { .. } => panic!($crate::BREAKVAL_IN_NOT_LOOP),
-		}
+		twist! { @single [("break") ()] [] ($e) }
 	};
 	// Handle a Looping object that breaks a specific label
 	( -with $l:lifetime | $e:expr ) => {
-		match $e {
-			Looping::Resume::<_, ::tear::BreakValError>(v) => v,
-			Looping::Break { .. } => break $l,
-			Looping::Continue { .. } => continue $l,
-			// Looping::BreakVal { value: v, .. } => break v, // Uncomment to see the original error message
-			Looping::BreakVal { .. } => panic!($crate::BREAKVAL_IN_NOT_LOOP),
-		}
+		twist! { @single [("break") ($l)] [] ($e) }
 	};
 	// Handle a Looping object that can break with a value
 	( -val $e:expr ) => {
-		match $e {
-			Looping::Resume(v) => v,
-			Looping::BreakVal { value: v, .. } => break v,
-			Looping::Continue { .. } => continue,
-			// Looping::Break { .. } => break (), // Uncomment to see the original error message
-			Looping::Break { .. } => panic!($crate::BREAK_WITHOUT_VAL),
-		}
+		twist! { @single [] [("breakval") ()] ($e) }
 	};
 	// Handle a Looping object that can break with a value for a specific label
 	( -val -with $l:lifetime | $e:expr ) => {
+		twist! { @single [] [("breakval") ($l)] ($e) }
+	};
+	// Generic implementation for when we break from a single loop
+	// Syntax is [ ] [ ] ($e)
+	//            |   ^If breaking with value, fill with ("breakval") ( $label? )
+    //            ^If breaking without value, fill with ("break") ( $label? )
+	( @single [$( ($breaker:tt) ($($label:lifetime)?) )?] [$( ($breakval:tt) ($($vlabel:lifetime)?) )?] ($e:expr) ) => {
 		match $e {
-			Looping::Resume(v) => v,
-			Looping::BreakVal { value: v, .. } => break $l v,
-			Looping::Continue { .. } => continue $l,
-			// Looping::Break { .. } => break (), // Uncomment to see the original error message
-			Looping::Break { .. } => panic!($crate::BREAK_WITHOUT_VAL),
+			$( _ if ::tear::bool!($breaker)  => unreachable!(), Looping::Resume::<_, $crate::BreakValError> (v) => v, )?
+			$( _ if ::tear::bool!($breakval) => unreachable!(), Looping::Resume(v) => v, )?
+			$( _ if ::tear::bool!($breaker)  => unreachable!(), Looping::Break { .. } => break $($label)?, )?
+			$( _ if ::tear::bool!($breakval) => unreachable!(), Looping::Break { .. } => panic!($crate::BREAK_WITHOUT_VAL), )?
+			Looping::Continue { .. } => continue $($($label)?)? $($($vlabel)?)?,
+			$( _ if ::tear::bool!($breaker)  => unreachable!(), Looping::BreakVal { .. } => panic!($crate::BREAKVAL_IN_NOT_LOOP), )?
+			$( _ if ::tear::bool!($breakval) => unreachable!(), Looping::BreakVal { value: v, .. } => break $($vlabel)? v, )?
 		}
 	};
 }
