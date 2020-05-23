@@ -1,8 +1,8 @@
 /*! Utilitary macros that take too much space in the main file
 
 Since they're macros, they're accessible from the crate root:
-- `rip!` and `fear!`
-- `last!`, `next!`, `resume!`
+- legacy `rip!` and `fear!` macros
+- `last!`, `next!`, `resume!` dirty macros
 - `anybox!`
 - `__unit!` and `__bool!`
 */
@@ -27,7 +27,7 @@ Since they're macros, they're accessible from the crate root:
 	}
 }
 
-/** Shortcut for creating a `Looping::Break`
+/** Dirty shortcut for creating a `Looping::Break`
 
 # Description
 
@@ -36,7 +36,8 @@ the loop label you want to break from (see `twist!`).
 
 Used for writing short `twist!` statements that break from an enclosing loop. See examples.
 
-Note that this macro will fail to compile if `twist!` can break with a value.
+Note that this macro will fail to compile if `twist!` can break with a value or when
+using `twist -label`.
 
 # Examples
 
@@ -66,7 +67,7 @@ the macro `break!` unless we use `r#break!`.
 	( $id:expr ) => { $crate::Looping::Break::<_, $crate::BreakValError> { label: Some($id) } };
 }
 
-/** Shortcut for creating a `Looping::Continue`
+/** Dirty shortcut for creating a `Looping::Continue`
 
 # Description
 
@@ -75,7 +76,8 @@ the loop label you want to continue from (see `twist!`).
 
 Used for writing short `twist!` statements that continue an enclosing loop. See examples.
 
-Note that this macro will fail to compile if `twist!` can break with a value.
+Note that this macro will fail to compile if `twist!` can break with a value or when
+using `twist -label`.
 
 # Examples
 
@@ -116,7 +118,7 @@ the macro `continue!` unless we use `r#continue!`.
 	( $id:expr ) => { $crate::Looping::Continue::<_, $crate::BreakValError> { label: Some($id) } };
 }
 
-/** Shortcut for creating a `Looping::Resume`
+/** Dirty shortcut for creating a `Looping::Resume`
 
 # Description
 
@@ -124,7 +126,8 @@ The only argument is the value to wrap in `Looping::Resume`.
 
 Used for writing short `twist!` statements that evaluate to a value. See examples.
 
-Note that this macro will fail to compile if `twist!` can break with a value.
+Note that this macro will fail to compile if `twist!` can break with a value or when
+using `twist -label`.
 
 # Examples
 

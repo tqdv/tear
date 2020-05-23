@@ -7,13 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 Implemented typed loop control with `twist!` and `Looping`.
+Switched from `rip!` to `terror!`.
 
 ### Added
-- Basic implementation of `twist!`
+- Basic implementation of `twist!` with `Looping` type and `anybox!`
+- Dirty utility macros `last!`, `next!`, `resume!`
+- `tear::extra` For importing everything in one fell swoop
 
 ### Changed
 - `tear_if!` lets you use anything in its body, instead of just expressions.
-- TODO Make `terror!` the preferred macro name instead of `rip!`
+- Make `terror!` the preferred macro over `rip!`
+- `terror!` and `fear!` can now take both argument forms
 
 ## [0.1.1] – 2020-05-19
 

@@ -100,6 +100,7 @@ let path = terror! { find_config_file() => Error::FindPathF };
 #![warn(missing_doc_code_examples)]
 
 pub mod prelude;
+pub mod extra;
 mod trait_impl; // Move the trait implementions as they are quite noisy
 pub mod twist_impl; // Currently only for `twist!`
 pub mod util; // Macros that aren't the focus of the crate, but are useful. To reduce file size.
@@ -112,19 +113,20 @@ pub use tw::Looping;
 
 /* CRATE DEV DOCS AND NOTES
 
-# FIXME
-- inconsistencies between when to use ValRet and Moral
+# Notes
+`=>` syntax always depends on Judge to separate the values.
 
 # TODO
 - add twist { $e => $f } syntax
 - Improve pitch with shorter examples and less rationale, more "this is cool"
-- Rethink the prelude
 - Check that the combinators are actually being used
+- Macros implementing Judge and Return
+- Tutorial for implementing Judge and Return, and what are their effects
 
 # Useful resources
 - <https://stackoverflow.com/questions/40302026/what-does-the-tt-metavariable-type-mean-in-rust-macros>
 - <https://medium.com/@phoomparin/a-beginners-guide-to-rust-macros-5c75594498f1>
-- <https://danielkeep.github.io/tlborm/book/mbe-min-captures-and-expansion-redux.html>
+- <https://danielkeep.github.io/tlborm/book/mbe-min-captures-and-expansion-redux.html> even if outdated
 - 'tear' related words: crease, cut, fold, split, strip. See <https://words.bighugelabs.com/tear>
 
 # Outline
@@ -138,14 +140,14 @@ In this module, we define in order
 use ValRet::*;
 use Moral::*;
 
-/** Represents a usable value or an early return. Use with tear!
+/** Represents a usable value or an early return. Use with `tear!`
 
 # Description
 
 The idea is to type an early return. The early return either evaluates to something (Val) or
 returns early (Ret).
 */
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum ValRet<V, R> {
 	/// The usable value
 	Val(V),
@@ -206,7 +208,7 @@ impl<V, R> ValRet<V, R> {
 	}
 }
 
-/// The ability to coerce to a ValRet and be used with the tear! macro
+/// The ability to coerce to a ValRet and be used with the `tear!` macro
 pub trait Return where Self :Sized {
 	/// The Val in ValRet
 	type Value;
@@ -217,7 +219,8 @@ pub trait Return where Self :Sized {
 	fn valret(self) -> ValRet<Self::Value, Self::Returned>;
 }
 
-/// A notion of good and bad for the terror! macro
+/// A notion of good and bad for the `terror!` macro
+#[derive(PartialEq, Debug, Clone)]
 pub enum Moral<Y, N> {
 	/// The good
 	Good(Y),
@@ -289,7 +292,7 @@ pub trait Judge {
 	fn from_bad (v :Self::Negative) -> Self;
 }
 
-/** Turns a ValRet into a value or an early return
+/** Turns a `ValRet` into a value or an early return
 
 It also coerces its argument to a ValRet (Return trait).
 
@@ -373,18 +376,18 @@ It also happens that "tear" looks like "ret(urn)" backwards.
 macro_rules! tear {
 	// `tear! { $e }`
 	( $e:expr ) => {
-		match ::tear::Return::valret($e) {
-			::tear::ValRet::Val(v) => v,
-			::tear::ValRet::Ret(r) => return r,
+		match $crate::Return::valret($e) {
+			$crate::ValRet::Val(v) => v,
+			$crate::ValRet::Ret(r) => return r,
 		}
 	};
 	// With a mapping function eg. `tear! { $e => |v| v }` or `tear! { $e => func }`
 	( $e:expr => $f:expr ) => {
 		{
 			#[allow(clippy::redundant_closure_call)]
-			match ::tear::Return::valret($e) {
-				::tear::ValRet::Val(v) => v,
-				::tear::ValRet::Ret(v) => return ($f(v)),
+			match $crate::Judge::into_moral($e) {
+				$crate::Moral::Good(v) => v,
+				$crate::Moral::Bad(v) => return ($f(v)),
 			}
 		}
 	}
@@ -460,27 +463,28 @@ assert_eq![ add_five(None), 0 ];
 macro_rules! tear_if {
 	// Normal tear_if! { $cond, $block }
 	( $c:expr $( , $($b:tt)* )? ) => {
-		tear! {
+		$crate::tear! {
 			if $c {
-				::tear::ValRet::Ret({ $($($b)*)? })
+				$crate::ValRet::Ret({ $($($b)*)? })
 			} else {
-				::tear::ValRet::Val(())
+				$crate::ValRet::Val(())
 			}
 		}
 	};
 	// Handle tear_if! { let … }
 	( let $p:pat = $e:expr $( , $($b:tt)* )? ) => {
-		tear! {
+		$crate::tear! {
 			if let $p = $e {
-				::tear::ValRet::Ret({ $($($b)*)? })
+				$crate::ValRet::Ret({ $($($b)*)? })
 			} else {
-				::tear::ValRet::Val(())
+				$crate::ValRet::Val(())
 			}
 		}
 	};
 }
 
-/** try!-like error-handling macro
+#[macro_export]
+/** `try!`-like error-handling macro
 
 `terror!` is like `tear!`, but stronger and more righteous.
 It automatically converts the Bad value to the return type Bad value (Judge trait).
@@ -512,7 +516,7 @@ The description is especially terse on purpose: it is really hard to explain wha
 
 ```rust
 # #[macro_use] extern crate tear;
-# use tear::prelude::*;
+# use tear::extra::*;
 fn return_two() -> Result<i32, String> {
     let even_number: i32 = terror! { Good(2) };
     # assert_eq![ even_number, 2 ];
@@ -524,7 +528,7 @@ fn return_two() -> Result<i32, String> {
 
 ```rust
 # #[macro_use] extern crate tear;
-# use tear::prelude::*;
+# use tear::extra::*;
 fn error_five() -> Result<i32, String> {
     let another_number: i32 = terror! { Bad("five".to_string()) };
     # Ok(5)
@@ -712,19 +716,18 @@ fn open_file(path: PathBuf) -> Result<(), Error> {
 The name terror comes from "return error" and "tear! error".
 The mnemonic was "When you need to scream an error from the inside" because of how closures worked (see §`terror!` vs. `?` when moving into closures).
 */
-#[macro_export]
 macro_rules! terror {
 	// `terror! { $e }`
 	( $e:expr ) => {
-		tear! { ::tear::Judge::into_moral($e).ret_error() }
+		$crate::tear! { $crate::Judge::into_moral($e).ret_error() }
 	};
 	// With a mapping function eg. `terror! { $e => |v| v }` or `terror! { $e => func }`
 	( $e:expr => $f:expr ) => {
 		{
 			#[allow(clippy::redundant_closure_call)]
-			match ::tear::Judge::into_moral($e) {
-				::tear::Moral::Good(v) => v,
-				::tear::Moral::Bad(v) => return ::tear::Judge::from_bad($f(v)),
+			match $crate::Judge::into_moral($e) {
+				$crate::Moral::Good(v) => v,
+				$crate::Moral::Bad(v) => return ::tear::Judge::from_bad($f(v)),
 			}
 		}
 	}

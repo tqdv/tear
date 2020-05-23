@@ -49,6 +49,7 @@ pub type BreakValError = Error0571__Tried_to_break_with_value_using_twist_withou
 
 We map `break`, `break $value` and `continue` to types.
 */
+#[derive(PartialEq, Debug, Clone)]
 pub enum Looping<T, B> {
 	/// Resume loop execution with value of type T
 	Resume(T),
@@ -342,14 +343,14 @@ macro_rules! twist {
 	// Generic implementation for when we handle loop labels
 	// We handle Break and BreakVal and boxed Breakval for the innermost loop (3 cases)
 	// Syntax: ($($flags:tt)*) ($($bk:tt)*) [( ) ( )] $e:expr
-	//             |               |          |   ^If we unbox, fill with $( ($count, $label, $type) )*
-	//             |               |          ^If we don't unbox, fill with $( ($count, $label, $type) )*
-	//             |               ^Breaks of ($count, $label)
-	//             ^"Flags": ($bk) ($bv) ($bx). Whether the innermost loop breaks, breakvals or breakval and unboxes
-	//              Specify the usable type for $bv and $bx
-	( @boxed ( ($($bk:tt)?) ($($bv:ty)?) ($($bx:ty)?) ) // Flags
-		( $( ($c:expr, $l:lifetime) )* ) // Breaks
-		[ ($( ($count:expr,  $label:lifetime,  $type:ty)  )*) // Normal breakvals
+	//             │               │          │   └ If we unbox, fill with $( ($count, $label, $type) )*
+	//             │               │          └ If we don't unbox, fill with $( ($count, $label, $type) )*
+	//             │               └ Breaks of ($count, $label)
+	//             └ "Flags": ($bk) ($bv) ($bx). Whether the innermost loop breaks, breakvals or breakval and unboxes
+	//               Specify the usable type for $bv and $bx
+	( @boxed ( ($($bk:tt)?) ($($bv:ty)?) ($($bx:ty)?) )         // Flags
+		( $( ($c:expr, $l:lifetime) )* )                        // Breaks
+		[ ($( ($count:expr,  $label:lifetime,  $type:ty)  )*)   // Normal breakvals
 		  ($( ($bcount:expr, $blabel:lifetime, $btype:ty) )*) ] // Boxed breakvals
 		$e:expr
 	) => {
@@ -419,10 +420,10 @@ macro_rules! twist {
 	
 	// Generic implementation for when we break from a single loop
 	// Syntax is [ ] [ ] ($e)
-	//            |   ^If breaking with value, fill with ("breakval") ( $label? )
-	//            ^If breaking without value, fill with ("break") ( $label? )
+	//            │   └ If breaking with value, fill with ("breakval") ( $label? )
+	//            └ If breaking without value, fill with ("break") ( $label? )
 	( @single
-		[$( ($breaker:tt) ($($label:lifetime)?) )?] // Break
+		[$( ($breaker:tt) ($($label:lifetime)?) )?]   // Break
 		[$( ($breakval:tt) ($($vlabel:lifetime)?) )?] // BreakVal
 		($e:expr)
 	) => {

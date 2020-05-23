@@ -1,4 +1,4 @@
-/*! Crate prelude when implementing traits
+/*! Crate prelude
 
 # Usage
 
@@ -8,20 +8,22 @@ use tear::prelude::*;
 
 # Description
 
+Simplifies importing every symbol needed for the macros to work.
+
 It exports the following symbols:
 
 - ValRet and its variants Val and Ret
-- Moral and its variants Good and Bad
 - Judge and Return traits
-- tear! and terror! macros
+- `tear!`, `terror!` and `twist!` macros
+- The useful `tear_if!` and `anybox!` macros
 */
 
 pub use crate::ValRet::{self, *};
-pub use crate::Moral::{self, *};
 
-// Traits
+// Traits (needed for the macros to work)
 pub use crate::Judge;
 pub use crate::Return;
 
 // Macros
-pub use crate::{tear, terror};
+pub use crate::{tear, terror, twist};
+pub use crate::{tear_if, anybox};
