@@ -1,7 +1,7 @@
-error: Missing `|` separator after labels in `twist! -labby` macro invocation. Add labels, or use `twist!` without `-labby`.
+error: Missing `|` separator after labels in `twist! -label` macro invocation. Add labels, or use `twist!` without `-label`.
  --> $DIR/missing_labels.rs:4:2
   |
-4 |     twist! { -labby JUST_BREAK }
+4 |     twist! { -label JUST_BREAK }
   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)

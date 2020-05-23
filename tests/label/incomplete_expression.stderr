@@ -1,0 +1,7 @@
+error: expected expression, found `]`
+ --> $DIR/incomplete_expression.rs:5:2
+  |
+5 |     twist! { -label 'a | 1 + }
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ expected expression
+  |
+  = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)

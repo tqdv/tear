@@ -1,0 +1,7 @@
+error: This failed to parse as an expression: let
+ --> $DIR/bad_expression.rs:4:2
+  |
+4 |     twist! { -label 'a | let }
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)

@@ -1,6 +1,9 @@
+// We test the twist! -label syntax
+
 use trybuild;
 use tear::twist;
 use tear::{next, last, resume};
+use tear::anybox;
 use tear::Looping;
 
 type L = Looping<i32, ()>;
@@ -11,14 +14,14 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 // All compile fail error go here
 #[test] fn bad_input () {
 	let t = trybuild::TestCases::new();
-	t.compile_fail("tests/labby/*.rs");
+	t.compile_fail("tests/label/*.rs");
 }
 
 #[test] fn just_break () {
 	let mut x = 0;
 	'a: loop {
 		loop {
-			twist! { -labby 'a | JUST_BREAK }
+			twist! { -label 'a | JUST_BREAK }
 			panic!("Should break before this");
 		}
 		x = 1;
@@ -30,7 +33,7 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 #[test] fn break_label () {
 	'a: loop {
 		loop {
-			twist! { -labby 'a | BREAK_0 }
+			twist! { -label 'a | BREAK_0 }
 			panic!("Should break before this");
 		}
 		panic!("Didn't break the label")
@@ -41,8 +44,8 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 	let mut x :i32 = 5;
 	'a: loop {
 		// This can't infer B type, so we use resume!() instead
-		// x = twist! { -labby 'a | Looping::Resume(1) };
-		x = twist! { -labby 'a | resume!(1) };
+		// x = twist! { -label 'a | Looping::Resume(1) };
+		x = twist! { -label 'a | resume!(1) };
 		break;
 	}
 	assert_eq![ x, 1 ];
@@ -54,7 +57,7 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 		x += 1;
 
 		// This can't infer B type, so we use next!() instead
-		twist! { -labby 'a |
+		twist! { -label 'a |
 			if x < 4 { next!(None) }
 			else { last!(None) } 
 		}
@@ -67,7 +70,7 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 	'a: loop {
 		x += 1;
 		// This can't infer B type, so we use next!() instead
-		twist! { -labby 'a |
+		twist! { -label 'a |
 			if x < 4 { next!(0) }
 			else { last!(None) } 
 		}
@@ -79,7 +82,7 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 #[test] fn break_label_two () {
 	'a: loop {
 		'b: loop {
-			twist! { -labby 'a, 'b | last!(0) }
+			twist! { -label 'a, 'b | last!(0) }
 			panic!("Should break before this");
 		}
 		panic!("Didn't break the label")
@@ -89,7 +92,7 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 #[test] fn breakval () {
 	let x = 'a: loop {
 		'b: loop {
-			twist! { -labby 'a :i32, 'b | Looping::BreakVal { label: Some(0), value: 8 } }
+			twist! { -label 'a :i32, 'b | Looping::BreakVal { label: Some(0), value: 8 } }
 			panic!("Should break before this");
 		}
 		panic!("Didn't break the label")
@@ -103,7 +106,7 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 		let z :i32 = 'b: loop {
 			loop {
 				y += 1;
-				twist! { -labby 'a :i32, 'b :i32 |
+				twist! { -label 'a :i32, 'b :i32 |
 					if y > 5 { Looping::BreakVal { label: Some(0), value: 8 } }
 					else { Looping::BreakVal { label: Some(1), value: 3 } }
 				}
@@ -123,7 +126,7 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 		'c: loop {
 			let z = 'b: loop {
 				'd: loop {
-					let v = twist! { -labby 'a :i32, 'c, 'b :i32, 'd |
+					let v = twist! { -label 'a :i32, 'c, 'b :i32, 'd |
 						if y < 5 { Looping::Resume (6) }
 						else if a < 8 { Looping::Break { label: Some(3) } }
 						else if y == 5 { y += 1; Looping::BreakVal { label: Some(2), value: 3 } }
@@ -147,7 +150,7 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 	let v = 'v: loop {
 		'a: loop {
 			let x = loop {
-				twist! { -val i32, -labby 'a, 'v :i32 |
+				twist! { -val i32, -label 'a, 'v :i32 |
 					if c < 3 { Looping::BreakVal { label: None, value: 0 } }
 					else if c == 3 { c += 1; Looping::Break { label: Some(0) } }
 					else { Looping::BreakVal { label: Some(1), value: 7 } }
@@ -162,8 +165,6 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 }
 
 #[test] fn anybox () {
-	use tear::anybox;
-	
 	struct S { d :i32 }
 	
 	let x = anybox!(S { d: 5 });
@@ -176,10 +177,6 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 }
 
 #[test] fn box_breakval () {
-	use tear::anybox;
-	
-	struct S { d: String }
-	
 	let mut i = 0;
 	let mut f = || {
 		let ii = i;
@@ -193,12 +190,38 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 		let b = 'b: loop {
 			let c = 'c: loop {
 				loop {
-					twist! { -box -labby 'a, 'b :i32, 'c :String | f() }
+					twist! { -box -label 'a, 'b :i32, 'c :String | f() }
 					break;
 				}
 			};
 			assert_eq![ c, "yeah".to_string() ]; println!("1/2");
 		};
 		assert_eq![ b, 2 ]; println!("2/2");
+	}
+}
+
+#[test] fn box_breakval_innermost () {
+	use std::any::Any;
+	fn create_closure () -> impl FnMut() -> Looping<(), Box<dyn Any>> {
+		let mut i = 0;
+		
+		move || {
+			let v = match i {
+				x if x == 0 => Looping::BreakVal { label: None, value: anybox!(0) },
+				x if x == 1 => Looping::Break { label: Some(0) },
+				_ => unreachable!(),
+			};
+			i += 1;
+			v
+		}
+	}
+	
+	let mut f = create_closure();
+	
+	'a: loop {
+		let v = loop {
+			twist! { -box -val i32, -label 'a | f() }
+		};
+		assert_eq![ v, 0 ]; println!("1/1");
 	}
 }

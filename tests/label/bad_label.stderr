@@ -1,0 +1,7 @@
+error: Bad label syntax: 'a 'b,
+ --> $DIR/bad_label.rs:4:2
+  |
+4 |     twist! { -label 'a 'b | 1 }
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
