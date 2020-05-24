@@ -6,13 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Implemented typed loop control with `twist!` and `Looping`.
-Switched from `rip!` to `terror!`.
+Implemented typed loop control.
 
 ### Added
 - Basic implementation of `twist!` with `Looping` type and `anybox!`
 - Dirty utility macros `last!`, `next!`, `resume!`
 - `tear::extra` For importing everything in one fell swoop
+- `Try` trait for `ValRet` and `Moral`, under the "experimental" feature
 
 ### Changed
 - `tear_if!` lets you use anything in its body, instead of just expressions.

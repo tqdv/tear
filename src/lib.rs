@@ -51,6 +51,10 @@ fn status_code() -> i32 {
 
 See the documentation for `tear!` and `terror!` for more examples.
 
+# Feature flags
+
+The "experimental" feature enables the experimental `Try` trait for `ValRet` and `Moral`.
+
 # Rationale
 
 I wanted to make early returns more explicit.
@@ -95,6 +99,9 @@ let path = terror! { find_config_file() => Error::FindPathF };
 
 */
 
+// Optional features
+#![cfg_attr(feature = "experimental", feature(try_trait))]
+
 // Documentation lints
 #![warn(missing_docs)]
 #![warn(missing_doc_code_examples)]
@@ -106,7 +113,7 @@ pub mod twist_impl; // Currently only for `twist!`
 pub mod util; // Macros that aren't the focus of the crate, but are useful. To reduce file size.
 
 // Shorthands used in macros
-pub use twist_impl as tw;
+use twist_impl as tw;
 pub use tw::BreakValError;
 pub use tw::{BREAKVAL_IN_NOT_LOOP, BREAK_WITHOUT_VAL, BAD_BREAKVAL_TYPE};
 pub use tw::Looping;
@@ -114,13 +121,12 @@ pub use tw::Looping;
 /* CRATE DEV DOCS AND NOTES
 
 # Notes
-`=>` syntax always depends on Judge to separate the values.
+- Return and Judge are separate because I can't to keep Judge "pure". Also because you might want
+  to implement only Return
 
 # TODO
-- Add support for the experimental `Try` trait
 - Improve pitch with shorter examples and less rationale, more "this is cool"
 - Check that the combinators are actually being used
-- Macros implementing Judge and Return
 - Tutorial for implementing Judge and Return, and what are their effects
 
 # Useful resources
@@ -208,7 +214,7 @@ impl<V, R> ValRet<V, R> {
 	}
 }
 
-/// The ability to coerce to a ValRet and be used with the `tear!` macro
+/// Convert into ValRet
 pub trait Return where Self :Sized {
 	/// The Val in ValRet
 	type Value;
@@ -279,9 +285,12 @@ impl<Y, N> Moral<Y, N> {
 	}
 }
 
-/** Convert from and to Moral. Used in the `terror!` macro.
+/** Convert from and to Moral. Used for the macro map syntax.
 
-This is inspired by the std::ops::Try trait.
+This mirrors the `std::ops::Try` trait.
+
+It is used for the `=>` mapping syntax of macros, to differentiate the value we want to keep from
+the value we want to map through the function.
 */
 pub trait Judge {
 	/// This is considered Good
