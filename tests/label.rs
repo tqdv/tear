@@ -11,7 +11,7 @@ type L = Looping<i32, ()>;
 const JUST_BREAK :L = Looping::Break { label: None };
 const BREAK_0 :L = Looping::Break { label: Some(0) };
 
-// All compile fail error go here
+// All compile fail errors go here
 #[test] fn bad_input () {
 	let t = trybuild::TestCases::new();
 	t.compile_fail("tests/label/*.rs");
@@ -58,8 +58,8 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 
 		// This can't infer B type, so we use next!() instead
 		twist! { -label 'a |
-			if x < 4 { next!(None) }
-			else { last!(None) } 
+			if x < 4 { next!() }
+			else { last!() }
 		}
 	}
 	assert_eq![ x, 4 ];
@@ -72,7 +72,7 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 		// This can't infer B type, so we use next!() instead
 		twist! { -label 'a |
 			if x < 4 { next!(0) }
-			else { last!(None) } 
+			else { last!() }
 		}
 		x -= 1;
 	}
@@ -224,4 +224,19 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 		};
 		assert_eq![ v, 0 ]; println!("1/1");
 	}
+}
+
+/* Too lazy to test more than one example for map syntax */
+
+#[test] fn breakval_multiple_map () {
+	use tear::Judge;
+
+	let v :i32 = 'a: loop {
+		'b: loop {
+			let x = twist! { -label 'a :i32, 'b | Some(4) => |_| Looping::BreakVal { label: Some(0), value: 0 } };
+			break 'a (x * 2);
+		}
+		break 3;
+	};
+	assert_eq![ v, 8 ];
 }

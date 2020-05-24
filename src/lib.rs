@@ -117,7 +117,7 @@ pub use tw::Looping;
 `=>` syntax always depends on Judge to separate the values.
 
 # TODO
-- add twist { $e => $f } syntax
+- Add support for the experimental `Try` trait
 - Improve pitch with shorter examples and less rationale, more "this is cool"
 - Check that the combinators are actually being used
 - Macros implementing Judge and Return
@@ -253,15 +253,28 @@ impl<Y, N> Moral<Y, N> {
 		}
 	}
 	
-	/** Convert to a ValRet by mapping Good to Val, and Bad to a wrapped error (Judge trait)
+	/** Convert to a `ValRet` by mapping Good to Val, and Bad to a wrapped error (Judge trait)
 	
 	Used in the `terror!` macro when you need to wrap the Bad value into another Bad before returning it.
-	See `terror!` explanation.
+	See `terror!` documentation.
 	*/
 	pub fn ret_error<O, R :Judge<Positive=O, Negative=N>> (self) -> ValRet<Y, R> {
 		match self {
 			Good(v) => Val(v),
 			Bad(v) => Ret(Judge::from_bad(v)),
+		}
+	}
+
+	/** Convert to a `Looping` by mapping Good to Resume, and Bad through a function
+
+	The function `f` takes the bad value and maps it to a `Looping` value.
+
+	Used in the `twist!` macro with the mapping (`=>`) syntax. See `twist!` documentation.
+	*/
+	pub fn resume_or_else<B> (self, f :impl FnOnce(N) -> Looping<Y, B>) -> Looping<Y, B> {
+		match self {
+			Good(v) => Looping::Resume(v),
+			Bad(v) => f(v),
 		}
 	}
 }

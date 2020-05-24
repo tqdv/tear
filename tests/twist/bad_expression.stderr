@@ -1,0 +1,7 @@
+error: Expected either `$e` or `$e => $f` on the right-hand side, got: 1 =>
+ --> $DIR/bad_expression.rs:4:2
+  |
+4 |     twist! { 1 => }
+  |     ^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)

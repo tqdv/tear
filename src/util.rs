@@ -31,8 +31,9 @@ Since they're macros, they're accessible from the crate root:
 
 # Description
 
-The only argument is the label: either `None` (simple break) or the index of
-the loop label you want to break from (see `twist!`).
+If called with no arguments, it breaks the current loop.
+
+If called with the label index, it breaks the corresponding loop (see `twist!`).
 
 Used for writing short `twist!` statements that break from an enclosing loop. See examples.
 
@@ -45,7 +46,7 @@ using `twist -label`.
 use tear::{twist, last};
 
 loop {
-    twist! { last!(None) }
+    twist! { last!() }
     panic!("We should break before this")
 }
 
@@ -63,7 +64,7 @@ It is named after the equivalent of break in Perl. `break` is a keyword so we ca
 the macro `break!` unless we use `r#break!`.
 */
 #[macro_export] macro_rules! last {
-	( None ) => { $crate::Looping::Break::<_, $crate::BreakValError> { label: None } };
+	() => { $crate::Looping::Break::<_, $crate::BreakValError> { label: None } };
 	( $id:expr ) => { $crate::Looping::Break::<_, $crate::BreakValError> { label: Some($id) } };
 }
 
@@ -71,8 +72,9 @@ the macro `break!` unless we use `r#break!`.
 
 # Description
 
-The only argument is the label: either `None` (simple continue) or the index of
-the loop label you want to continue from (see `twist!`).
+If called with no arguments, it skips the current loop.
+
+If called with the label index, it skips the corresponding loop (see `twist!`).
 
 Used for writing short `twist!` statements that continue an enclosing loop. See examples.
 
@@ -89,7 +91,7 @@ loop {
     i += 1;
     
     if i < 5 {
-        twist! { next!(None) }
+        twist! { next!() }
     }
     break;
 }
@@ -114,7 +116,7 @@ It is named after the equivalent of continue in Perl. `continue` is a keyword so
 the macro `continue!` unless we use `r#continue!`.
 */
 #[macro_export] macro_rules! next {
-	( None ) => { $crate::Looping::Continue::<_, $crate::BreakValError> { label: None } };
+	() => { $crate::Looping::Continue::<_, $crate::BreakValError> { label: None } };
 	( $id:expr ) => { $crate::Looping::Continue::<_, $crate::BreakValError> { label: Some($id) } };
 }
 

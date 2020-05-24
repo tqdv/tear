@@ -77,6 +77,19 @@ pub enum Looping<T, B> {
 Mostly contains step by step (@prefix) parsing for all the entrypoints in `twist!`. When it's done,
 it calls `twist!` with the final processed values.
 
+# Overview of the steps
+
+When breaking from a single loop, `@parse-map` parse the right-hand part as either an expression, or
+an expression `=>` another expression (which is the mapping function).
+
+When breaking from multiple loop labels, there are multiple steps:
+- `@label-parse` separates the labels from the right-hand expressions
+- `@label-expr` parses the right-hand expressions as either a single expression, or
+  an expression `=>` the mapping function
+- `@label-labels` parses each comma-separated label of the format `$label` or `$label : $type`
+- `@label-box` moves the collected data for breakvals into the right slot, to indicate if
+  we need to unbox the values or not
+
 # Input and Output
 
 The syntax for calling `@label-parse` is the following:
@@ -113,6 +126,26 @@ See inline documentation for brief explanations of what each `@step` does.
 */
 #[macro_export]
 macro_rules! __impl_twist {
+	/* For @single */
+
+	// Parse the right-hand side
+	// ...as an expression => mapping-function
+	( @parse-map [$($bk:tt)*] [$($bv:tt)*] ($e:expr => $f:expr) ) => {
+		$crate::twist! { @single [$($bk)*] [$($bv)*] ($e.into_moral().resume_or_else($f)) }
+	};
+	// ...as an expression
+	( @parse-map [$($bk:tt)*] [$($bv:tt)*] ($e:expr) ) => {
+		$crate::twist! { @single [$($bk)*] [$($bv)*] ($e) }
+	};
+	// ...or fail
+	( @parse-map [$($bk:tt)*] [$($bv:tt)*] ($($tokens:tt)*) ) => {
+		compile_error!(concat!(
+			"Expected either `$e` or `$e => $f` on the right-hand side, got: ",
+			stringify!($($tokens)*)))
+	};
+
+	/* For @boxed */
+
 	// Separate the labels from the expression by getting everything before `|`
 	// ≪ (<$flag>*) [ $input ] -> ≫
 	// → ≪ (<$flag>*) [ <$expr-token>* ] -> <$label-token>* ≫
@@ -130,11 +163,17 @@ macro_rules! __impl_twist {
 	// Parse the expression, or fail
 	// ≪ (<$flag>*) [ <$expr-token>* ] -> <$label-token>* ≫
 	// → ≪ (<$flag>*) 0, [ <$label-token>* , ] -> [() ()] <$expr> ≫
+	// ...as `$e
 	( @label-expr ($($flag:tt)*) [ $e:expr ] -> $($l:tt)* ) => {
 		// We add an extra comma, so that every label ends with a comma, simplifies parsing
 		$crate::__impl_twist! { @label-labels ($($flag)*) 0, [$($l)* ,] -> [() ()] $e }
 	};
-	// Bad expression
+	// ...as `$e => $f`
+	( @label-expr ($($flag:tt)*) [ $e:expr => $f:expr ] -> $($l:tt)* ) => {
+		// We add an extra comma, so that every label ends with a comma, simplifies parsing
+		$crate::__impl_twist! { @label-labels ($($flag)*) 0, [$($l)* ,] -> [() ()] $e.into_moral().resume_or_else($f) }
+	};
+	// ...or fail
 	( @label-expr ($($flag:tt)*) [ $($rest:tt)* ] $($whatever:tt)* ) => {
 		compile_error!(concat!("This failed to parse as an expression: ", stringify!($($rest)*)))
 	};
@@ -175,12 +214,18 @@ macro_rules! __impl_twist {
 
 # Usage
 
-With `$e` and expression that evalutes to a `Looping` value. The general syntax is:
+The general syntax is the following:
 
 ```text
+// With $e an expression of type `Looping`
 twist! { [-val] $e }
 twist! { [-val] -with $label | $e }
 twist! { [-box] [-val $type,] -label <$label [: $type]>,* | $e }
+
+// Same, but with $e implementing Judge, and $f a function that maps the Bad value to Looping
+twist! { [-val] $e => $f }
+twist! { [-val] -with $label | $e => $f }
+twist! { [-box] [-val $type,] -label <$label [: $type]>,* | $e => $f }
 ```
 
 ## Use cases
@@ -205,7 +250,7 @@ If you're breaking from multiple loops:
 twist! { -label 'a, 'b | $e } // Normal break for loops 'a, 'b and innermost
 ```
 
-If you're breaking from multiple loops and can break with the **same value type**:
+If you're breaking from multiple loops and can break with the *same value type*:
 
 ```ignore
 twist! { -label 'a: i32, 'b, 'c: i32 | $e } // If the innermost loop is a normal break
@@ -222,22 +267,69 @@ twist! { -box -label 'a: i32, 'b: String | $e }
 twist! { -box -val i32, -label 'a, 'b: String | $e }
 ```
 
+If you want to **extract a value** (eg. `Result` or `Option`) and break/continue otherwise:
+
+```ignore
+twist! { $e => $f }
+// Or any of the previous ones with `$e => $f` instead of `$e`
+```
+
+with $e your value (that implements Judge) and $f the mapping function from the Bad type
+to a `Looping` value.
+
 # Description
 
 `twist!` takes an expression of `Looping` type, and `break`s, `continue`s or resume the loop
 execution based on the `Looping` variant. There are various flags that control which loop are
 concerned, and what value type to break with (for `loop` loops).
 
-`-box`
+Normally, you can only break with a single type because it is the `B` parameter for
+`Looping::<_ B>`. But if we use `Box<dyn Any>`, a trait object, and then we downcast to the
+correct concrete type, we can break with multiple types.
+
+The `-box` option tells `twist!` to expect a break type of `Box<dyn Any>` and to attempt to
+downcast to the type specified by `-val` or `-label` before breaking the loop.
+
+The mapping syntax `$e => $f` is used to simplify "good value" handling in loops. `$e` implements
+Judge, and `$f` maps the bad type of `$e` to a `Looping` value.
+
+For example, you generally want to skip the current loop iteration if you get an `Err(_)`
+from a function call. To do so, you would either use `if let` and
+have the happy path indented in the `if let` body, or you could add the following match
+statement before the rest of your code:
+
+```
+# fn try_get_value () -> Result<i32, ()> { Ok(1) }
+# loop {
+let wanted_value = match try_get_value() {
+    Ok(v) => v,
+    Err(_) => continue,
+};
+# break;
+# }
+```
+
+The mapping syntax lets you simplify that "guard" statement to the following:
+
+```
+# use tear::extra::*;
+# fn try_get_value () -> Result<i32, ()> { Ok(1) }
+# loop {
+let wanted_value = twist! { try_get_value() => |_| next!() };
+# break;
+# }
+```
 
 ## Errors
 
 ### Compile failure
-A common error (at least for me), is to forget that you **need** to specify if the innermost loop
+
+A common error (at least for me) is to forget that you need to specify if the innermost loop
 breaks with a value or not, even if you don't do anything with it.
+Similarly, you always need to specify the types of the loop labels.
 
 ### Panics
-This **will** panic if you use the wrong loop label index; if you try to break a
+This **will panic if** you use the wrong loop label index; if you try to break a
 non-`loop` loop with a value; or if you try to break a `loop`-loop that expects a value,
 without a value
 
@@ -400,24 +492,7 @@ macro_rules! twist {
 	};
 	
 	/* When we just break from a single loop */
-	
-	// Handle a Looping object
-	( $e:expr ) => {
-		twist! { @single [("break") ()] [] ($e) }
-	};
-	// Handle a Looping object that breaks a specific label
-	( -with $l:lifetime | $e:expr ) => {
-		twist! { @single [("break") ($l)] [] ($e) }
-	};
-	// Handle a Looping object that can break with a value
-	( -val $e:expr ) => {
-		twist! { @single [] [("breakval") ()] ($e) }
-	};
-	// Handle a Looping object that can break with a value for a specific label
-	( -val -with $l:lifetime | $e:expr ) => {
-		twist! { @single [] [("breakval") ($l)] ($e) }
-	};
-	
+
 	// Generic implementation for when we break from a single loop
 	// Syntax is [ ] [ ] ($e)
 	//            │   └ If breaking with value, fill with ("breakval") ( $label? )
@@ -436,5 +511,22 @@ macro_rules! twist {
 			$( _ if ::tear::__bool!($breaker)  => unreachable!(), $crate::Looping::BreakVal { .. } => panic!($crate::BREAKVAL_IN_NOT_LOOP), )?
 			$( _ if $crate::__bool!($breakval) => unreachable!(), $crate::Looping::BreakVal { value: v, .. } => break $($vlabel)? v, )?
 		}
+	};
+
+	// Handle a Looping object that breaks a specific label
+	( -with $l:lifetime | $($tokens:tt)* ) => {
+		$crate::__impl_twist! { @parse-map [("break") ($l)] [] ($($tokens)*) }
+	};
+	// Handle a Looping object that can break with a value for a specific label
+	( -val -with $l:lifetime | $($tokens:tt)* ) => {
+		$crate::__impl_twist! { @parse-map [] [("breakval") ($l)] ($($tokens)*) }
+	};
+	// Handle a Looping object that can break with a value
+	( -val $($tokens:tt)* ) => {
+		$crate::__impl_twist! { @parse-map [] [("breakval") ()] ($($tokens)*) }
+	};
+	// Handle a Looping object
+	( $($tokens:tt)* ) => {
+		$crate::__impl_twist! { @parse-map [("break") ()] [] ($($tokens)*) }
 	};
 }
