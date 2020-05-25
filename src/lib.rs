@@ -1,20 +1,28 @@
-/*! Typed early returns and loop control + Syntax sugar for try!-like error handling
+/*! **Typed early returns and loop control + Syntax sugar for try!-like error handling**
 
 *Works with Rust v1.34+ (released on 11 April 2019)*
 
-# Overview
+# Getting started
 
-The main focus of this crate are the `tear!`, `terror!` and `twist!` macros.
+The main focus of this crate are the following three macros:
+- `tear!` is used with `ValRet` for typed early returns.
+- `terror!` is syntax-sugar for `try!` or the `?` operator.
+- `twist!` works with `Looping` to implement typed loop control.
 
-`tear!` is used with `ValRet` for typed early returns.
+Look at the synopsis for a general idea of what is possible,
+and then read the documentation for the macro that interests you.
 
-`terror!` is syntax-sugar for `try!` or the `?` operator.
-
-`twist!` works with `Looping` to implement typed loop control.
+Otherwise, read the `overview` module documentation that mentions *all* the things in this crate.
 
 ## Feature flags
 
-The "experimental" crate feature enables support for the experimental `Try` trait.
+- The "experimental" crate feature enables support for the experimental `Try` trait. But it breaks
+  the following syntax: `terror! { None => |_| () }`. Replace it with
+  `terror! { None => |_| NoneError }`
+
+- The "combinators" crate feature adds the `side` method to the `Judge` trait. It lets you convert
+  to `Either` any type that implements `Judge`. You can then use `Either`'s combinators to do
+  what you want.
 
 ## Synopsis
 
@@ -25,34 +33,60 @@ use tear::prelude::*;
 
 Explicit error-handling syntax with `terror!`:
 ```rust
+# use tear::prelude::*;
+# use std::io::{self, ErrorKind};
+# fn can_error () -> Result<i32, CustomError> { Ok(1) }
+# fn can_io_error () -> io::Result<i32> { Err(io::Error::new(ErrorKind::Other, "nope")) }
+# fn print_error<T> (_ :T) -> CustomError { CustomError::Str("a".to_string()) }
+# enum CustomError {
+#     Io(io::Error),
+#     Str(String)
+# }
+# fn f() -> Result<i32, CustomError> {
 let handled = terror! { can_error() => print_error };
 let variant = terror! { can_io_error() => CustomError::Io };
+# Ok(1)
+# }
 
 // Equivalent using `?`:
+# fn g() -> Result<i32, CustomError> {
 let handled = can_error().map_err(print_error)?;
-let variant = can_io_error.map_err(CustomError::Io)?;
+let variant = can_io_error().map_err(CustomError::Io)?;
+# Ok(2)
+# }
 ```
 
 Early loop continue with `twist!`:
-```rust
+```
+# use tear::extra::*;
+# struct Regex {}
+# impl Regex {
+#     fn new(_ :&str) -> Result<Regex, ()> { Err(()) }
+# }
+# let regexes_strings = vec![ "a", "b" ];
 for re in regexes_strings {
     // Skip iteration if the regex fails to compile
-    let re = twist! { Regex::new(re) => |_| next!() }
+    let re = twist! { Regex::new(re) => |_| next!() };
 
     // Use regex...
+# }
 ```
 
 Keyword-like early returns with `tear_if!`:
 ```rust
+# use tear::prelude::*;
 fn divide_i32 (num: i32, denom: i32) -> Option<f32> {
     // Return early if dividing by 0
     tear_if! { denom == 0, None };
 
     // Compute quotient...
+    # None
+# }
 ```
 
 Typed returns with `tear!`:
 ```rust
+# use tear::prelude::*;
 // Tells the calling function to return early on failure
 fn get_value_or_return() -> ValRet<String, i32> { Ret(-1) }
 
@@ -60,9 +94,9 @@ fn status_code() -> i32 {
     let v = tear! { get_value_or_return() };
 
     // Process value...
+    # 1
+# }
 ```
-
-See the documentation for `tear!`, `terror!` and `twist!` for more information.
 
 # See also
 
@@ -84,13 +118,13 @@ In this module, we define in order
 - tear!, tear_if! and terror! macros
 */
 #![no_std] // But we use std for tests
+#![warn(missing_docs)] // Documentation lints
 
 // Optional features
 #![cfg_attr(feature = "experimental", feature(try_trait))]
 
-// Documentation lints
-#![warn(missing_docs)]
-
+// Modules
+pub mod overview; // For documentation
 pub mod prelude;
 pub mod extra;
 pub mod trait_impl; // Move the trait implementions as they are quite noisy
@@ -106,6 +140,7 @@ pub use util::gut;
 // For convenience, also used in prelude
 use ValRet::*;
 use Moral::*;
+#[cfg(feature = "combinators")] use either::Either::{self, *};
 
 /** Represents a usable value or an early return. Use with `tear!`
 
@@ -140,48 +175,6 @@ impl<V, R> ValRet<V, R> {
 	pub fn val (self) -> Option<V> { maybe_match! { self, Val(v) => v } }
 	/// Gets the `Ret(R)` variant as `Option<R>`
 	pub fn ret (self) -> Option<R> { maybe_match! { self, Ret(r) => r } }
-
-	/* Combinators */
-
-	/** Returns a new ValRet where we map the old Ret to the new Ret using the function supplied
-	
-	```rust
-	# use tear::prelude::*;
-	# let ok:    ValRet<&str, &str> = Val("ok");
-	# let error: ValRet<&str, &str> = Ret("error");
-	# 
-	assert_eq![    ok.map_ret(|_| -1), Val("ok") ];
-	assert_eq![ error.map_ret(|_| -1), Ret(-1)   ];
-	```
-	*/
-	pub fn map_ret<R1> (self, f :impl FnOnce(R) -> R1) -> ValRet<V, R1> {
-		match self {
-			Val(v) => Val(v),
-			Ret(r) => Ret(f(r)),
-		}
-	}
-	
-	/** Returns itself if it's a Val, otherwise calls the function to create
-	a new ValRet based on the value of Ret.
-	
-	```rust
-	# use tear::prelude::*;
-	# let ok:    ValRet<&str, &str> = Val("ok");
-	# let error: ValRet<&str, &str> = Ret("error");
-	fn recover (e: &str) -> ValRet<&str, i32> {
-		if e == "error" { Val("recover") } else { Ret(-1) }
-	}
-	
-	assert_eq![    ok.or_else(recover), Val("ok")      ];
-	assert_eq![ error.or_else(recover), Val("recover") ];
-	```
-	*/
-	pub fn or_else<R1> (self, f :impl FnOnce(R) -> ValRet<V, R1>) -> ValRet<V, R1> {
-		match self {
-			Val(v) => Val(v),
-			Ret(r) => f(r),
-		}
-	}
 }
 
 /// Convert into ValRet
@@ -192,7 +185,7 @@ pub trait Return where Self :Sized {
 	type Returned;
 	
 	/// Convert itself to a ValRet
-	fn valret (self) -> ValRet<Self::Value, Self::Returned>;
+	fn into_valret (self) -> ValRet<Self::Value, Self::Returned>;
 }
 
 /// A notion of good and bad for the `terror!` macro
@@ -217,8 +210,6 @@ impl<Y, N> Moral<Y, N> {
 	/** Convert to ValRet
 
 	Maps Good to Val and Bad to Ret.
-
-	Used in the blanket implementation of `Return` for types that implement `Judge`.
 	*/
 	pub fn into_valret (self) -> ValRet<Y, N> {
 		match self {
@@ -227,11 +218,26 @@ impl<Y, N> Moral<Y, N> {
 		}
 	}
 
-	/// Convert to Result
+	/** Convert to Result. Use result instead
+
+	Maps Good to Ok and Bad to Err.
+	*/
 	pub fn into_result (self) -> Result<Y, N> {
 		match self {
 			Good(v) => Ok(v),
 			Bad(v) => Err(v),
+		}
+	}
+
+	/** Convert to Result. Use side instead
+
+	Maps Good to Right and Bad to Left.
+	*/
+	#[cfg(feature = "combinators")]
+	pub fn into_either (self) -> Either<N, Y> {
+		match self {
+			Good(v) => Right(v),
+			Bad(v) => Left(v),
 		}
 	}
 	
@@ -270,14 +276,14 @@ This mirrors the `std::ops::Try` trait.
 It is used for the `=>` mapping syntax of macros, to differentiate the value we want to keep from
 the value we want to map through the function.
 */
-pub trait Judge {
+pub trait Judge :Sized {
 	/// This is considered Good
 	type Positive;
 	/// This is considered Bad
 	type Negative;
 	
 	/// Convert to Moral
-	fn into_moral(self) -> Moral<Self::Positive, Self::Negative>;
+	fn into_moral (self) -> Moral<Self::Positive, Self::Negative>;
 	
 	/** Wraps a good value into itself
 	
@@ -290,6 +296,19 @@ pub trait Judge {
 	For example `Result::Err(e)` and `Judge::from_bad(e)` are equivalent. Useful for converting types.
 	*/
 	fn from_bad (v :Self::Negative) -> Self;
+
+	/* Supplied methods */
+
+	/** Convert to result */
+	fn result (self) -> Result<Self::Positive, Self::Negative> {
+		self.into_moral().into_result()
+	}
+
+	/** Convert to Either */
+	#[cfg(feature = "combinators")]
+	fn side (self) -> Either<Self::Negative, Self::Positive> {
+		self.into_moral().into_either()
+	}
 }
 
 /** Turns a `ValRet` into a value or an early return
@@ -321,7 +340,7 @@ tear! with Val and Ret.
 ```rust
 # #[macro_use] extern crate tear;
 # use tear::prelude::*;
-# 
+#
 // "Ian" is assigned to name
 let name = tear! { Val("Ian") };
 # assert_eq![ name, "Ian" ];
@@ -376,7 +395,7 @@ It also happens that "tear" looks like "ret(urn)" backwards.
 macro_rules! tear {
 	// `tear! { $e }`
 	( $e:expr ) => {
-		match $crate::Return::valret($e) {
+		match $crate::Return::into_valret($e) {
 			$crate::ValRet::Val(v) => v,
 			$crate::ValRet::Ret(r) => return r,
 		}
@@ -483,7 +502,6 @@ macro_rules! tear_if {
 	};
 }
 
-#[macro_export]
 /** `try!`-like error-handling macro
 
 `terror!` is like `tear!`, but stronger and more righteous.
@@ -681,6 +699,7 @@ fn open_file(path: PathBuf) -> Result<(), Error> {
 The name terror comes from "return error" and "tear! error".
 The mnemonic was "When you need to scream an error from the inside" because of how closures worked (see §`terror!` vs. `?` when moving into closures).
 */
+#[macro_export]
 macro_rules! terror {
 	// `terror! { $e }`
 	( $e:expr ) => {

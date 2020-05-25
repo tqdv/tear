@@ -15,7 +15,7 @@ impl<T, E, Me> Return for Me where Me: Judge<Positive=T, Negative=E> {
 	type Value = T;
 	type Returned = E;
 
-	fn valret(self) -> ValRet<T, E> {
+	fn into_valret(self) -> ValRet<T, E> {
 		self.into_moral().into_valret()
 	}
 }

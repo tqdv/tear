@@ -232,35 +232,36 @@ twist! { [-box] [-val $type,] -label <$label [: $type]>,* | $e => $f }
 
 If you're breaking from the current loop, use one of the following
 
-```ignore
+```text
 twist! { $e }      // Usual case
 twist! { -val $e } // If you're breaking with a value (`loop` loop)
 ```
 
 If you're breaking a labeled loop:
 
-```ignore
+```text
 twist! { -with 'label | $e }      // Normal break from the labeled loop
 twist! { -val -with 'label | $e } // If you're breaking the labeled loop with a value
 ```
 
 If you're breaking from multiple loops:
 
-```ignore
+```text
 twist! { -label 'a, 'b | $e } // Normal break for loops 'a, 'b and innermost
 ```
 
 If you're breaking from multiple loops and can break with the *same value type*:
 
-```ignore
-twist! { -label 'a: i32, 'b, 'c: i32 | $e } // If the innermost loop is a normal break
-twist! { -val i32, -label 'a:i32, 'b | $e } // If the innermost loop breaks with a value
-                                            // (the type is mandatory)
+```text
+// If the innermost loop is a normal break
+twist! { -label 'a: i32, 'b, 'c: i32 | $e }
+// If the innermost loop breaks with a value (the type is mandatory)
+twist! { -val i32, -label 'a:i32, 'b | $e }
 ```
 
 If you're breaking from multiple loops with multiple types by using `Box<dyn Any>` as the value type:
 
-```ignore
+```text
 // If the innermost loop is a normal break
 twist! { -box -label 'a: i32, 'b: String | $e }
 // If the innermost loop breaks with a value
@@ -269,7 +270,7 @@ twist! { -box -val i32, -label 'a, 'b: String | $e }
 
 If you want to **extract a value** (eg. `Result` or `Option`) and break/continue otherwise:
 
-```ignore
+```text
 twist! { $e => $f }
 // Or any of the previous ones with `$e => $f` instead of `$e`
 ```

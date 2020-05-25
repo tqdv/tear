@@ -19,6 +19,7 @@ It exports the following symbols:
 */
 
 pub use crate::ValRet::{self, *};
+pub use crate::Looping;
 
 // Traits (needed for the macros to work)
 pub use crate::Judge;

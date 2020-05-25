@@ -216,7 +216,7 @@ macro_rules! anybox {
 
 Used for conditional expansion in macros as so.
 
-```ignore
+```text
 $( __unit!($variable); $code )?
 ```
 */
@@ -227,7 +227,7 @@ $( __unit!($variable); $code )?
 Used for conditional expansion of match arms in macros.
 `__bool!` expands to false so that the arm is never executed.
 
-```ignore
+```text
 match $something {
     $(
         _ if __bool!($variable) => unreachable!(),
@@ -272,6 +272,7 @@ fn f () -> Option<i32> {
 ```
 */
 #[cfg(not(feature = "experimental"))]
+#[allow(clippy::unused_unit)]
 pub fn gut<T> (_ :T) -> () { () }
 
 /** Always returns `NoneError`
