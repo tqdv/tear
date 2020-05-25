@@ -39,7 +39,7 @@ fn divide_i32 (num: i32, denom: i32) -> Option<f32> {
     // Compute quotient...
 ```
 
-Typed returns with `tear!`:
+Typed early returns with `tear!`:
 ```rust
 // Tells the calling function to return early on failure
 fn get_value_or_return() -> ValRet<String, i32> { Ret(-1) }
