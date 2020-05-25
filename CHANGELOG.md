@@ -6,18 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Implemented typed loop control.
+Implemented typed loop control with `twist!`. Become fully compatible with `?`.
 
 ### Added
-- Basic implementation of `twist!` with `Looping` type and `anybox!`
+- Implementation of `twist!` with `Looping` type and `anybox!`
 - Dirty utility macros `last!`, `next!`, `resume!`
 - `tear::extra` For importing everything in one fell swoop
 - `Try` trait for `ValRet` and `Moral`, under the "experimental" feature
+- enum accessors for `ValRet` and `Moral`
+- Maintenance badge on crates.io
 
 ### Changed
 - `tear_if!` lets you use anything in its body, instead of just expressions.
 - Make `terror!` the preferred macro over `rip!`
 - `terror!` and `fear!` can now take both argument forms
+- `terror!` now uses the `From` trait, just like `?`
 
 ## [0.1.1] – 2020-05-19
 

@@ -4,7 +4,7 @@ Since they're macros, they're accessible from the crate root:
 - legacy `rip!` and `fear!` macros
 - `last!`, `next!`, `resume!` dirty macros
 - `anybox!`
-- `__unit!` and `__bool!`
+- (dev) `__unit!` and `__bool!`
 - (not exported) `maybe_match!`
 */
 
@@ -206,7 +206,7 @@ macro_rules! anybox {
 		{
 			let v = $e;
 			let b = Box::new(v);
-			let x = b as Box<dyn std::any::Any>;
+			let x = b as Box<dyn core::any::Any>;
 			x
 		}
 	}
@@ -258,3 +258,25 @@ macro_rules! maybe_match {
 		}
 	}
 }
+
+/** Always returns `()`
+
+This function is used with `terror!` to return None, where you would use `.ok()?.unwrap()` instead.
+
+```
+# use tear::prelude::*;
+fn f () -> Option<i32> {
+	terror! { None => tear::gut }
+	Some(1)
+}
+```
+*/
+#[cfg(not(feature = "experimental"))]
+pub fn gut<T> (_ :T) -> () { () }
+
+/** Always returns `NoneError`
+
+This function is used with `terror!` to return None, where you would use `.ok()?.unwrap()` instead.
+*/
+#[cfg(feature = "experimental")]
+pub fn gut<T> (_ :T) -> core::option::NoneError { core::option::NoneError }

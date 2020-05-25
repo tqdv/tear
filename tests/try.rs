@@ -1,6 +1,6 @@
 #![cfg(feature = "experimental")]
 
-use tear::ValRet::{self, *};
+use tear::prelude::*;
 
 fn try_val () -> Option<i32> {
 	let v = Val(3)?;

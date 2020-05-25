@@ -1,93 +1,107 @@
 # tear
 
-> Typed early returns and syntax sugar macros for try!-like error handling
+Typed early returns and loop control + Syntax sugar for try!-like error handling
 
-*Works with Rust v1.34+*
+*Works with Rust v1.34+ (released on 11 April 2019)*
 
-## Description
+## Synopsis
 
-This crate exports the `tear!` and `rip!` macros.
-
-`tear!` is used with `ValRet` for typed early returns. `rip!` is syntax-sugar for `try!` or the `?` operator.
-
-## Usage
-
+Import the macros into your module:
 ```rust
-// Add this in your crate entrypoint (main.rs or lib.rs)
-#[macro_use] extern crate tear;
-
-// Import symbols for this example, generally not needed
 use tear::prelude::*;
-
-// Error handling. Turn this…
-let x = can_error().map_err(rescue_error)?;
-// …into this
-let x = rip! { can_error() => rescue_error };
-
-// Early return
-fn divide(a: i32, b: i32) -> Option<f32> {
-    tear_if! { b == 0, None };
-    
-    let quotient = (a as f32) / (b as f32);
-    Some(quotient)
-}
-
-// This function tells the calling function to return early
-fn return_from_function() -> ValRet<String, i32> { Ret(-1) }
-
-// Action at a distance
-fn status_code() -> i32 {
-    tear! { return_from_function() }; // returns
-    0
-}
 ```
 
-See the documentation for `tear!` and `rip!` for more examples.
+Explicit error-handling syntax with `terror!`:
+```rust
+let handled = terror! { can_error() => print_error };
+let variant = terror! { can_io_error() => CustomError::Io };
+
+// Equivalent using `?`:
+let handled = can_error().map_err(print_error)?;
+let variant = can_io_error.map_err(CustomError::Io)?;
+```
+
+Early loop continue with `twist!`:
+```rust
+for re in regexes_strings {
+    // Skip iteration if the regex fails to compile
+    let re = twist! { Regex::new(re) => |_| next!() }
+
+    // Use regex...
+```
+
+Keyword-like early returns with `tear_if!`:
+```rust
+fn divide_i32 (num: i32, denom: i32) -> Option<f32> {
+    // Return early if dividing by 0
+    tear_if! { denom == 0, None };
+
+    // Compute quotient...
+```
+
+Typed returns with `tear!`:
+```rust
+// Tells the calling function to return early on failure
+fn get_value_or_return() -> ValRet<String, i32> { Ret(-1) }
+
+fn status_code() -> i32 {
+    let v = tear! { get_value_or_return() };
+
+    // Process value...
+```
+
+See [the documentation](https://docs.rs/tear) for more info.
 
 ## Rationale
 
-I wanted to make early returns more explicit.
+**I wanted to make early returns more explicit.**
 
-```text
-if $cond {
-    $statements;
-    return $ret;
-}
-```
+Normally, you need to read until the end of the
+`if` body to know if it returns early or not. `tear_if` places that information at
+the beginning of the block.
 
-Normally, you can't tell from the outside if a code block will return early or not.
-To bring the return statement out of the block requires a way to signal that we want to return early and something to catch that signal.
-`ValRet` represents the signal and `tear!` returns early if needed.
+**I wanted typed early returns because it is useful for passing exitcodes up the callchain.**
 
-Having a typed early return allows you to have functions that can force the caller function to return early.
-Action at a distance inspired by how [Slips](https://docs.raku.org/type/Slip) work in Raku.
+Having a typed early return allows you to have functions that can force their caller
+to return early. It's an action at a distance inspired by how
+ [Slips](https://docs.raku.org/type/Slip) work in Raku.
 
-After reading up on how the `?` operator works, I thought of leveraging this typed early return for an explicit error handling syntax.
-I wanted to annotate each potential failure point with a symbol and associate that symbol to an error handler.
+**I wanted annotated failure points instead of too many combinators.**
+
+The `?` operator works is essentially a conditional early-return.
+To convert the errors you get to the right type, you need to use combinators.
+I find it hard to discern that those combinators are meant for error handling.
+  
 Something like this:
-
 ```rust
-let path = find_config_file().mark(A)
-let mut file = get_file_bufwriter(&path).mark(B)
-
-// Error handlers
-[A]: .ok_or(Error::FindPathF)?;
-[B]: .map_err(Error::GetFileF)?;
+let path = find_config_file().ok_or(Error::FindPathF)?
+let mut file = get_file_buffer(&path).map_err(Error::GetFileF)?;
 ```
 
-Turns out this is already possible, but noisy, so the `rip!` macro makes a bit more explicit:
+The `terror!` macro makes the error handling more explicit:
 ```rust
-let path = find_config_file().ok_or(Error::FindPathF)?;
-let path = rip! { find_config_file() => Error::FindPathF };
+let path = terror! { find_config_file() => Error::FindPathF };
+let mut file = terror! { get_file_buffer(&path) => Error::GetFileF };
 ```
+
+**Loop control and early returns are similar**
+
+I already implemented typed early return, so why not implement typed loop controls well ?
+They're the same kind of useful.
 
 ## See also
 
-- [Error Handling in Rust §The real `try!` macro / `?` operator](https://blog.burntsushi.net/rust-error-handling/#the-real-try-macro-operator)
-- [guard](https://docs.rs/crate/guard), a crate implementing "guard" expressions
+- [Error Handling in Rust §The real `try!` macro / `?` operator][error-handling try]
+- [guard](https://docs.rs/crate/guard), a crate implementing "guard" expressions,
+  the counterpart to `tear_if!`
+
+[error-handling try]: https://blog.burntsushi.net/rust-error-handling/#the-real-try-macro-operator
 
 ## License
 
-Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT license](LICENSE-MIT) at your option.
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE)
+or [MIT license](LICENSE-MIT) at your option.
 
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this crate by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+_Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion
+in this crate by you, as defined in the Apache-2.0 license, shall be dual licensed as above,
+without any additional terms or conditions._

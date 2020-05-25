@@ -1,14 +1,14 @@
 // We test the simple twist!
 
-use trybuild;
 use tear::twist;
 use tear::{next, last, resume};
 use tear::Looping;
 use tear::Judge;
 
 // All compile fail errors go here
-#[cfg(not(feature = "experimental"))] // Nightly output is different
+#[cfg(not(any(feature = "experimental", feature = "ignore-ui")))] // Feature flags to ignore test
 #[test] fn bad_input () {
+	use trybuild;
 	let t = trybuild::TestCases::new();
 	t.compile_fail("tests/twist/*.rs");
 }

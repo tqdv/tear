@@ -25,3 +25,6 @@ pub use crate::Looping;
 // Extra macros
 pub use crate::{rip, fear};
 pub use crate::{last, next, resume};
+
+// Extra functions
+pub use crate::gut;

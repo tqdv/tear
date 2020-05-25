@@ -6,16 +6,20 @@ authors = ["Tilwa Qendov <tilwa.qendov@gmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
 
+# For crates.io
 readme = "README.md"
 repository = "https://github.com/tqdv/tear/"
 keywords = ["early", "return", "try", "syntax", "error"]
 categories = ["rust-patterns"]
 
+[badges]
+maintenance.status = "passively-maintained"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-# For Try, which is experimental
-experimental = []
+experimental = [] # For Try, which is experimental
+ignore-ui    = [] # Ignore UI tests when developing
 
 [dev-dependencies]
 trybuild = "1.0"

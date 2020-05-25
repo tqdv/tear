@@ -1,96 +1,68 @@
-/*! Typed early returns and syntax sugar macros for try!-like error handling
+/*! Typed early returns and loop control + Syntax sugar for try!-like error handling
 
-*Works with Rust v1.34+*
+*Works with Rust v1.34+ (released on 11 April 2019)*
 
-# Description
+# Overview
 
-This crate exports the `tear!` and `terror!` macros.
+The main focus of this crate are the `tear!`, `terror!` and `twist!` macros.
 
-`tear!` is used with `ValRet` for typed early returns. `terror!` is syntax-sugar for `try!` or the `?` operator.
+`tear!` is used with `ValRet` for typed early returns.
 
-# Usage
+`terror!` is syntax-sugar for `try!` or the `?` operator.
 
+`twist!` works with `Looping` to implement typed loop control.
+
+## Feature flags
+
+The "experimental" crate feature enables support for the experimental `Try` trait.
+
+## Synopsis
+
+Import the macros into your module:
 ```rust
-// Add this in your crate entrypoint (main.rs or lib.rs)
-#[macro_use] extern crate tear;
-
-// Import symbols for this example, generally not needed
 use tear::prelude::*;
-# 
-# fn can_error() -> Result<i32, i32> {
-#     Err(-5)
-# }
-# fn rescue_error(e: i32) -> i32 { e }
+```
 
-# fn f() -> Result<(), i32> {
-// Error handling. Turn this…
-let x = can_error().map_err(rescue_error)?;
-// …into this
-let x = terror! { can_error() => rescue_error };
-# Ok(())
-# }
+Explicit error-handling syntax with `terror!`:
+```rust
+let handled = terror! { can_error() => print_error };
+let variant = terror! { can_io_error() => CustomError::Io };
 
-// Early return
-fn divide(a: i32, b: i32) -> Option<f32> {
-    tear_if! { b == 0, None };
-    
-    let quotient = (a as f32) / (b as f32);
-    Some(quotient)
-}
+// Equivalent using `?`:
+let handled = can_error().map_err(print_error)?;
+let variant = can_io_error.map_err(CustomError::Io)?;
+```
 
-// This function tells the calling function to return early
-fn return_from_function() -> ValRet<String, i32> { Ret(-1) }
+Early loop continue with `twist!`:
+```rust
+for re in regexes_strings {
+    // Skip iteration if the regex fails to compile
+    let re = twist! { Regex::new(re) => |_| next!() }
 
-// Action at a distance
+    // Use regex...
+```
+
+Keyword-like early returns with `tear_if!`:
+```rust
+fn divide_i32 (num: i32, denom: i32) -> Option<f32> {
+    // Return early if dividing by 0
+    tear_if! { denom == 0, None };
+
+    // Compute quotient...
+```
+
+Typed returns with `tear!`:
+```rust
+// Tells the calling function to return early on failure
+fn get_value_or_return() -> ValRet<String, i32> { Ret(-1) }
+
 fn status_code() -> i32 {
-    tear! { return_from_function() }; // returns
-    0
-}
-# assert_eq![ status_code(), -1 ];
+    let v = tear! { get_value_or_return() };
+
+    // Process value...
 ```
 
-See the documentation for `tear!` and `terror!` for more examples.
-
-# Feature flags
-
-The "experimental" feature enables the experimental `Try` trait for `ValRet` and `Moral`.
-
-# Rationale
-
-I wanted to make early returns more explicit.
-
-```text
-if $cond {
-    $statements;
-    return $ret;
-}
-```
-
-Normally, you can't tell from the outside if a code block will return early or not.
-To bring the return statement out of the block requires a way to signal that we want to return early and something to catch that signal.
-`ValRet` represents the signal and `tear!` returns early if needed.
-
-Having a typed early return allows you to have functions that can force the caller function to return early.
-Action at a distance inspired by how [Slips](https://docs.raku.org/type/Slip) work in Raku.
-
-After reading up on how the `?` operator works, I thought of leveraging this typed early return for an explicit error handling syntax.
-I wanted to annotate each potential failure point with a symbol and associate that symbol to an error handler.
-Something like this:
-
-```text
-let path = find_config_file().mark(A)
-let mut file = get_file_bufwriter(&path).mark(B)
-
-// Error handlers
-[A]: .ok_or(Error::FindPathF)?;
-[B]: .map_err(Error::GetFileF)?;
-```
-
-Turns out this is already possible, but noisy, so the `terror!` macro makes a bit more explicit:
-```ignore
-let path = find_config_file().ok_or(Error::FindPathF)?;
-let path = terror! { find_config_file() => Error::FindPathF };
-```
+See the documentation for `tear!`, `terror!` and `twist!` for more information.
 
 # See also
 
@@ -99,7 +71,7 @@ let path = terror! { find_config_file() => Error::FindPathF };
   the opposite of `tear_if!`.
 
 Finally, please star the [GitHub repo](https://github.com/tqdv/tear) if you found this crate useful.
-It helps developer ego!
+It helps developer ego !
 
 # Module documentation
 
@@ -111,6 +83,7 @@ In this module, we define in order
 - Moral, its implementation, and its associated trait Judge
 - tear!, tear_if! and terror! macros
 */
+#![no_std] // But we use std for tests
 
 // Optional features
 #![cfg_attr(feature = "experimental", feature(try_trait))]
@@ -124,11 +97,11 @@ pub mod trait_impl; // Move the trait implementions as they are quite noisy
 pub mod twist_impl; // Currently only for `twist!`
 #[macro_use] pub mod util; // Utility macros that aren't the main focus. To reduce file size.
 
-// Shorthands used in macros
-use twist_impl as tw;
-pub use tw::BreakValError;
-pub use tw::{BREAKVAL_IN_NOT_LOOP, BREAK_WITHOUT_VAL, BAD_BREAKVAL_TYPE};
-pub use tw::Looping;
+// Reexports for macros and convenience
+pub use twist_impl::BreakValError;
+pub use twist_impl::{BREAKVAL_IN_NOT_LOOP, BREAK_WITHOUT_VAL, BAD_BREAKVAL_TYPE};
+pub use twist_impl::Looping;
+pub use util::gut;
 
 // For convenience, also used in prelude
 use ValRet::*;
@@ -523,6 +496,7 @@ let x = terror! { $e };
 ```
 
 If $e is a good value, it is assigned to x. Otherwise, $e is `Bad(value)`, we return `from_bad(value)`.
+This form is equivalent to the `?` operator.
 
 ```text
 let x = terror! { $e => $f };
@@ -656,43 +630,7 @@ To do so, we extract the `ParseIntError`, and wrap it into our custom error with
 That is the role of the function following the `=>` arrow: it converts the error type of
 the left statement, into the function return error type.
 
-# Comparison with `?` (try operator)
-
-terror! behaves like the `?` operator, with the difference that it doesn't automatically
-convert the actual error type.
-
-This means that these two statements are generally equivalent:
-
-```rust
-# #[macro_use] extern crate tear;
-# use std::{fs::File, path::PathBuf, io};
-# 
-# fn func (path: PathBuf) -> io::Result<()> {
-File::open(&path)?;
-terror! { File::open(&path) };
-# Ok(())
-# }
-```
-
-Except when we expect automatic conversion, for example when using types like
-`Result<T, Box<dyn Error+Send+Sync>>`. See [Error Handling in Rust §The From trait][burntsushi-from]
-and [anyhow](https://docs.rs/anyhow/), an error handling crate.
-In those cases, you would need to explicitly specify the conversion:
-
-[burntsushi-from]: https://blog.burntsushi.net/rust-error-handling/#the-from-trait
-
-```rust
-# #[macro_use] extern crate tear;
-# use std::{fs::File, path::PathBuf, io};
-use std::convert::From;
-#
-# fn func (path: PathBuf) -> io::Result<()> {
-terror! { File::open(&path) => From::from };
-# Ok(())
-# }
-```
-
-## `terror!` vs. `?` when moving into closures
+# `terror!` vs. `?` when moving into closures
 
 The only difference between `terror!` and `?` is that since `terror!` is a macro,
 you can move variables into the closure without the borrow checker yelling at you.
@@ -754,7 +692,7 @@ macro_rules! terror {
 			#[allow(clippy::redundant_closure_call)]
 			match $crate::Judge::into_moral($e) {
 				$crate::Moral::Good(v) => v,
-				$crate::Moral::Bad(v) => return ::tear::Judge::from_bad($f(v)),
+				$crate::Moral::Bad(v) => return ::tear::Judge::from_bad(From::from($f(v))),
 			}
 		}
 	}
