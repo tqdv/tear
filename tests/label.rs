@@ -12,6 +12,7 @@ const JUST_BREAK :L = Looping::Break { label: None };
 const BREAK_0 :L = Looping::Break { label: Some(0) };
 
 // All compile fail errors go here
+#[cfg(not(feature = "experimental"))] // Nightly output is different
 #[test] fn bad_input () {
 	let t = trybuild::TestCases::new();
 	t.compile_fail("tests/label/*.rs");

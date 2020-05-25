@@ -95,47 +95,16 @@ let path = terror! { find_config_file() => Error::FindPathF };
 # See also
 
 - [Error Handling in Rust §The real `try!` macro / `?` operator](https://blog.burntsushi.net/rust-error-handling/#the-real-try-macro-operator)
-- [guard](https://docs.rs/crate/guard), a crate implementing "guard" expressions
+- [guard](https://docs.rs/crate/guard), a crate implementing "guard" expressions,
+  the opposite of `tear_if!`.
 
-*/
+Finally, please star the [GitHub repo](https://github.com/tqdv/tear) if you found this crate useful.
+It helps developer ego!
 
-// Optional features
-#![cfg_attr(feature = "experimental", feature(try_trait))]
+# Module documentation
 
-// Documentation lints
-#![warn(missing_docs)]
-#![warn(missing_doc_code_examples)]
-
-pub mod prelude;
-pub mod extra;
-mod trait_impl; // Move the trait implementions as they are quite noisy
-pub mod twist_impl; // Currently only for `twist!`
-pub mod util; // Macros that aren't the focus of the crate, but are useful. To reduce file size.
-
-// Shorthands used in macros
-use twist_impl as tw;
-pub use tw::BreakValError;
-pub use tw::{BREAKVAL_IN_NOT_LOOP, BREAK_WITHOUT_VAL, BAD_BREAKVAL_TYPE};
-pub use tw::Looping;
-
-/* CRATE DEV DOCS AND NOTES
-
-# Notes
-- Return and Judge are separate because I can't to keep Judge "pure". Also because you might want
-  to implement only Return
-
-# TODO
-- Improve pitch with shorter examples and less rationale, more "this is cool"
-- Check that the combinators are actually being used
-- Tutorial for implementing Judge and Return, and what are their effects
-
-# Useful resources
-- <https://stackoverflow.com/questions/40302026/what-does-the-tt-metavariable-type-mean-in-rust-macros>
-- <https://medium.com/@phoomparin/a-beginners-guide-to-rust-macros-5c75594498f1>
-- <https://danielkeep.github.io/tlborm/book/mbe-min-captures-and-expansion-redux.html> even if outdated
-- 'tear' related words: crease, cut, fold, split, strip. See <https://words.bighugelabs.com/tear>
-
-# Outline
+Most things are public to allow easy modification. However, things intended only for module
+development are marked as `(dev)`.
 
 In this module, we define in order
 - ValRet, its implementation, and its associated trait Return
@@ -143,6 +112,25 @@ In this module, we define in order
 - tear!, tear_if! and terror! macros
 */
 
+// Optional features
+#![cfg_attr(feature = "experimental", feature(try_trait))]
+
+// Documentation lints
+#![warn(missing_docs)]
+
+pub mod prelude;
+pub mod extra;
+pub mod trait_impl; // Move the trait implementions as they are quite noisy
+pub mod twist_impl; // Currently only for `twist!`
+#[macro_use] pub mod util; // Utility macros that aren't the main focus. To reduce file size.
+
+// Shorthands used in macros
+use twist_impl as tw;
+pub use tw::BreakValError;
+pub use tw::{BREAKVAL_IN_NOT_LOOP, BREAK_WITHOUT_VAL, BAD_BREAKVAL_TYPE};
+pub use tw::Looping;
+
+// For convenience, also used in prelude
 use ValRet::*;
 use Moral::*;
 
@@ -173,6 +161,15 @@ let error: ValRet<&str, &str> = Ret("error");
 ```
 */
 impl<V, R> ValRet<V, R> {
+	/* Accessors */
+
+	/// Gets the `Val(V)` variant as `Option<V>`
+	pub fn val (self) -> Option<V> { maybe_match! { self, Val(v) => v } }
+	/// Gets the `Ret(R)` variant as `Option<R>`
+	pub fn ret (self) -> Option<R> { maybe_match! { self, Ret(r) => r } }
+
+	/* Combinators */
+
 	/** Returns a new ValRet where we map the old Ret to the new Ret using the function supplied
 	
 	```rust
@@ -222,7 +219,7 @@ pub trait Return where Self :Sized {
 	type Returned;
 	
 	/// Convert itself to a ValRet
-	fn valret(self) -> ValRet<Self::Value, Self::Returned>;
+	fn valret (self) -> ValRet<Self::Value, Self::Returned>;
 }
 
 /// A notion of good and bad for the `terror!` macro
@@ -235,14 +232,28 @@ pub enum Moral<Y, N> {
 }
 
 impl<Y, N> Moral<Y, N> {
-	/// Convert to ValRet
+	/* Accessors */
+
+	/// Gets the `Good(Y)` variant as `Option<Y>`
+	pub fn good (self) -> Option<Y> { maybe_match! { self, Good(v) => v } }
+	/// Gets the `Bad(N)` variant as `Option<N>`
+	pub fn bad (self) -> Option<N> { maybe_match! { self, Bad(v) => v } }
+
+	/* Conversions */
+
+	/** Convert to ValRet
+
+	Maps Good to Val and Bad to Ret.
+
+	Used in the blanket implementation of `Return` for types that implement `Judge`.
+	*/
 	pub fn into_valret (self) -> ValRet<Y, N> {
 		match self {
 			Good(v) => Val(v),
 			Bad(v) => Ret(v),
 		}
 	}
-	
+
 	/// Convert to Result
 	pub fn into_result (self) -> Result<Y, N> {
 		match self {
@@ -251,14 +262,8 @@ impl<Y, N> Moral<Y, N> {
 		}
 	}
 	
-	/// Convert to Option. Or get the good variant as an Option.
-	pub fn good (self) -> Option<Y> {
-		match self {
-			Good(v) => Some(v),
-			Bad(_) => None,
-		}
-	}
-	
+	/* Special conversions */
+
 	/** Convert to a `ValRet` by mapping Good to Val, and Bad to a wrapped error (Judge trait)
 	
 	Used in the `terror!` macro when you need to wrap the Bad value into another Bad before returning it.

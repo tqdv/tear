@@ -5,6 +5,7 @@ Since they're macros, they're accessible from the crate root:
 - `last!`, `next!`, `resume!` dirty macros
 - `anybox!`
 - `__unit!` and `__bool!`
+- (not exported) `maybe_match!`
 */
 
 /** (Legacy) Alias for `terror!`
@@ -235,3 +236,25 @@ match $something {
 ```
 */
 #[macro_export] macro_rules! __bool { ( $($whatever:tt)* ) => { false } }
+
+/** Executes match arm, or returns None
+
+Helper for writing enum accessors where you either match the correct pattern, or return None.
+
+The match arm expression is automatically wrapped into `Some`, so you don't need to.
+
+# Example
+
+```
+let x: Option<i32> = maybe_match! { "a", "a" => 3 };
+assert_eq![ x, Some(3) ];
+```
+*/
+macro_rules! maybe_match {
+	( $i:expr, $p:pat => $e:expr ) => {
+		match $i {
+			$p => Some($e),
+			_ => None,
+		}
+	}
+}

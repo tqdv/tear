@@ -7,6 +7,7 @@ use tear::Looping;
 use tear::Judge;
 
 // All compile fail errors go here
+#[cfg(not(feature = "experimental"))] // Nightly output is different
 #[test] fn bad_input () {
 	let t = trybuild::TestCases::new();
 	t.compile_fail("tests/twist/*.rs");
