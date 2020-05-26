@@ -10,9 +10,6 @@
   two words.
 
 ## TODO
-- Improve pitch with shorter examples and less rationale, more "this is cool"
-- Check if the combinators are actually being used
-- Tutorial for implementing Judge and Return, and what are their effects
 
 ## Useful resources
 - <https://stackoverflow.com/questions/40302026/what-does-the-tt-metavariable-type-mean-in-rust-macros>

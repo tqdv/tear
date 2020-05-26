@@ -17,12 +17,15 @@ Otherwise, read the `overview` module documentation that mentions *all* the thin
 ## Feature flags
 
 - The "experimental" crate feature enables support for the experimental `Try` trait. But it breaks
-  the following syntax: `terror! { None => |_| () }`. Replace it with
-  `terror! { None => |_| NoneError }`
+  the following syntax: `terror! { $e => $f }` in a function returning `Option<T>`
+  with `$f` returning `()`. Return `NoneError` instead.
 
 - The "combinators" crate feature adds the `side` method to the `Judge` trait. It lets you convert
   to `Either` any type that implements `Judge`. You can then use `Either`'s combinators to do
   what you want.
+
+- (dev) "ignore-ui" lets you ignore error message tests because all of them are wrong as soon
+  as you have any warnings.
 
 ## Synopsis
 
