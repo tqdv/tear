@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] – 2020-05-27
+
 Make `terror!` work for booleans and add the `next_if!` and `last_if!` macros.
 
 ### Migration
