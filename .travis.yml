@@ -8,6 +8,7 @@ rust:
 env:
   - FEATURES="ignore-ui"
   - FEATURES="ignore-ui combinators"
+cache: cargo
 jobs:
   allow_failures:
     - rust: nightly
