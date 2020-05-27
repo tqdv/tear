@@ -52,6 +52,10 @@ fn status_code() -> i32 {
 
 See [the documentation](https://docs.rs/tear) for more info.
 
+## Changelog
+
+See [CHANGELOG](CHANGELOG.md).
+
 ## Rationale
 
 **I wanted to make early returns more explicit.**

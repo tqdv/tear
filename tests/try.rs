@@ -4,10 +4,11 @@
 #![feature(try_trait)]
 
 use tear::prelude::*;
+use tear::Maru;
 use std::ops::Try;
 
 fn try_val () -> Option<i32> {
-	let v = Val(3)?;
+	let v = Val::<_, Maru>(3)?;
 	Some(v)
 }
 
@@ -50,6 +51,8 @@ impl Try for PendingMessage {
 		PendingMessage { status: true, data: Some(v) }
 	}
 }
+
+impl_judge_from_try!(PendingMessage);
 
 #[test] fn implemented_try () {
 	fn f() -> PendingMessage {

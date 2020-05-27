@@ -51,6 +51,10 @@ fn f () -> Option<i32> {
 # }
 ```
 
+If you need to do some things before returning `None`, use a block, and return `tear::Maru` at the
+end. `Maru` is the placeholder type used to represent the bad value of `Option<T>`, or the good
+and bad values of `bool`.
+
 # Loop control
 
 The `twist!` macro has many forms (see its documentation), and it only processes `Looping` types.
@@ -93,6 +97,9 @@ loop {
     twist! { None => |_| last!() };
 }
 ```
+
+There's also `next_if!` and `last_if!` macros that continue or break the loop based on a condition
+or a pattern match.
 
 # Legacy
 

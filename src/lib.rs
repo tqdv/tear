@@ -16,9 +16,7 @@ Otherwise, read the `overview` module documentation that mentions *all* the thin
 
 ## Feature flags
 
-- The "experimental" crate feature enables support for the experimental `Try` trait. But it breaks
-  the following syntax: `terror! { $e => $f }` in a function returning `Option<T>`
-  with `$f` returning `()`. Return `NoneError` instead.
+- The "experimental" crate feature enables support for the experimental `Try` trait.
 
 - The "combinators" crate feature adds the `side` method to the `Judge` trait. It lets you convert
   to `Either` any type that implements `Judge`. You can then use `Either`'s combinators to do
@@ -122,6 +120,7 @@ In this module, we define in order
 */
 #![no_std] // But we use std for tests
 #![warn(missing_docs)] // Documentation lints
+#![allow(clippy::tabs_in_doc_comments)] // Clippy ignore
 
 // Optional features
 #![cfg_attr(feature = "experimental", feature(try_trait))]
@@ -139,6 +138,7 @@ pub use twist_impl::BreakValError;
 pub use twist_impl::{BREAKVAL_IN_NOT_LOOP, BREAK_WITHOUT_VAL, BAD_BREAKVAL_TYPE};
 pub use twist_impl::Looping;
 pub use util::gut;
+pub use trait_impl::Maru;
 
 // For convenience, also used in prelude
 use ValRet::*;
@@ -409,7 +409,7 @@ macro_rules! tear {
 			#[allow(clippy::redundant_closure_call)]
 			match $crate::Judge::into_moral($e) {
 				$crate::Moral::Good(v) => v,
-				$crate::Moral::Bad(v) => return ($f(v)),
+				$crate::Moral::Bad(v) => return From::from($f(v)),
 			}
 		}
 	}

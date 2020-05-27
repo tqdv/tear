@@ -7,6 +7,7 @@ Since they're macros, they're accessible from the crate root:
 - (dev) `__unit!` and `__bool!`
 - (not exported) `maybe_match!`
 */
+use crate::Maru;
 
 /** (Legacy) Alias for `terror!`
 
@@ -63,6 +64,9 @@ loop {
 
 It is named after the equivalent of break in Perl. `break` is a keyword so we can't name
 the macro `break!` unless we use `r#break!`.
+
+# See also
+- `last_if!`
 */
 #[macro_export] macro_rules! last {
 	() => { $crate::Looping::Break::<_, $crate::BreakValError> { label: None } };
@@ -115,6 +119,9 @@ let mut i = 0;
 
 It is named after the equivalent of continue in Perl. `continue` is a keyword so we can't name
 the macro `continue!` unless we use `r#continue!`.
+
+# See also
+- `next_if!`
 */
 #[macro_export] macro_rules! next {
 	() => { $crate::Looping::Continue::<_, $crate::BreakValError> { label: None } };
@@ -259,7 +266,7 @@ macro_rules! maybe_match {
 	}
 }
 
-/** Always returns `()`
+/** Always returns `Maru`
 
 This function is used with `terror!` to return None, where you would use `.ok()?.unwrap()` instead.
 
@@ -271,13 +278,4 @@ fn f () -> Option<i32> {
 }
 ```
 */
-#[cfg(not(feature = "experimental"))]
-#[allow(clippy::unused_unit)]
-pub fn gut<T> (_ :T) -> () { () }
-
-/** Always returns `NoneError`
-
-This function is used with `terror!` to return None, where you would use `.ok()?.unwrap()` instead.
-*/
-#[cfg(feature = "experimental")]
-pub fn gut<T> (_ :T) -> core::option::NoneError { core::option::NoneError }
+pub fn gut<T> (_ :T) -> Maru { Maru }

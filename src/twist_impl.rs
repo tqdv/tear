@@ -36,7 +36,7 @@ In other cases, the compiler will emit a generic type mismatch or "cannot break 
 See `rustc --explain E0571` for what the compiler is warning against.
 */
 #[allow(non_camel_case_types)]
-pub struct Error0571__Tried_to_break_with_value_using_twist_without_val_flag__Use_Break_instead_of_BreakVal_or_add_the_dash_val_flag_to_twist();
+pub enum Error0571__Tried_to_break_with_value_using_twist_without_val_flag__Use_Break_instead_of_BreakVal_or_add_the_dash_val_flag_to_twist{}
 
 /** (dev) Short name for `Error0571__Tr...twist`
 
@@ -529,5 +529,123 @@ macro_rules! twist {
 	// Handle a Looping object
 	( $($tokens:tt)* ) => {
 		$crate::__impl_twist! { @parse-map [("break") ()] [] ($($tokens)*) }
+	};
+}
+
+/** Explicit loop continue
+
+# Description
+
+```text
+next_if! { $cond,
+    $body
+}
+```
+
+With a pattern:
+```text
+next_if! { let $pat = $expr,
+    $body
+}
+```
+
+# Example
+
+```
+# use tear::prelude::*;
+let mut sum = 0;
+for v in 0..=5 {
+    next_if! { v % 2 == 0 }
+    sum += v;
+}
+assert_eq![ sum, 9 ];
+```
+
+# See also
+- `tear_if!` with examples
+- `last_if!`
+*/
+#[macro_export]
+macro_rules! next_if {
+	// Normal next_if! { $cond, $block }
+	( $c:expr $( , $($b:tt)* )? ) => {
+		$crate::twist! {
+			if $c {
+				{ $($($b)*)? };
+				$crate::next!()
+			} else {
+				$crate::resume!(())
+			}
+		}
+	};
+	// Handle next_if! { let … }
+	( let $p:pat = $e:expr $( , $($b:tt)* )? ) => {
+		$crate::twist! {
+			if let $p = $e {
+				{ $($($b)*)? };
+				$crate::next!()
+			} else {
+				$crate::resume!(())
+			}
+		}
+	};
+}
+
+/** Explicit loop break
+
+# Description
+
+```text
+last_if! { $cond,
+    $body
+}
+```
+
+With a pattern:
+```text
+last_if! { let $pat = $expr,
+    $body
+}
+```
+
+# Example
+
+```
+# use tear::prelude::*;
+let mut sum = 0;
+for v in 0..=10 {
+    last_if! { sum > 10 }
+    sum += v;
+}
+assert_eq![ sum, 15 ];
+```
+
+# See also
+- `tear_if!` with examples
+- `next_if!`
+*/
+#[macro_export]
+macro_rules! last_if {
+	// Normal last_if! { $cond, $block }
+	( $c:expr $( , $($b:tt)* )? ) => {
+		$crate::twist! {
+			if $c {
+				{ $($($b)*)? };
+				$crate::last!()
+			} else {
+				$crate::resume!(())
+			}
+		}
+	};
+	// Handle last_if! { let … }
+	( let $p:pat = $e:expr $( , $($b:tt)* )? ) => {
+		$crate::twist! {
+			if let $p = $e {
+				{ $($($b)*)? };
+				$crate::last!()
+			} else {
+				$crate::resume!(())
+			}
+		}
 	};
 }

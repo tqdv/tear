@@ -14,6 +14,7 @@ In addition to all the symbols in `prelude`, it exports the following:
 - Looping
 - Legacy macros `rip!` and `fear!`
 - Utility macros `last!`, `next!` and `resume!`
+- `gut` function, and `Maru` type
 */
 
 pub use crate::prelude::*;
@@ -26,5 +27,6 @@ pub use crate::Looping;
 pub use crate::{rip, fear};
 pub use crate::{last, next, resume};
 
-// Extra functions
+// Gutting
 pub use crate::gut;
+pub use crate::Maru;

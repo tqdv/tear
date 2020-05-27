@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Make `terror!` work for booleans and add the `next_if!` and `last_if!` macros.
+
+### Migration
+- If you were returning `()` in `terror!` in a function returning `Option<T>`, return `Maru` instead.
+- _(experimental)_ `Try` → `Judge` implementations are now manual. Use the `impl_judge_from_try!` macro.
+
+### Added
+- Implemented `Judge` on `bool`.
+- Added `Maru` that's similar to `()` and `NoneError`
+- Added `next_if!` and `last_if!`
+
+### Changed
+- Use `Maru` instead of `()` in `gut` and `Judge` for `Option`
+
 ## [0.2.0] – 2020-05-26
 
 Implemented typed loop control with `twist!`. Make `terror!` fully compatible with `?`.
