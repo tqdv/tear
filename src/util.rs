@@ -1,33 +1,12 @@
 /*! Utilitary macros that take too much space in the main file
 
 Since they're macros, they're accessible from the crate root:
-- legacy `rip!` and `fear!` macros
 - `last!`, `next!`, `resume!` dirty macros
 - `anybox!`
 - (dev) `__unit!` and `__bool!`
 - (not exported) `maybe_match!`
 */
 use crate::Maru;
-
-/** (Legacy) Alias for `terror!`
-
-`rip!` used to only have the expression syntax, and `terror!` was the mapping syntax.
-*/
-#[macro_export] macro_rules! rip {
-	( $($tokens:tt)* ) => {
-		terror! { $($tokens)* }
-	}
-}
-
-/** (Legacy) Alias for `tear!`
-
-`tear!` used to only have the expression syntax, and `fear!` was the mapping syntax.
-*/
-#[macro_export] macro_rules! fear {
-	( $($tokens:tt)* ) => {
-		tear! { $($tokens)* }
-	}
-}
 
 /** Dirty shortcut for creating a `Looping::Break`
 

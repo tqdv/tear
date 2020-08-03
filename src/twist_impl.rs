@@ -7,19 +7,19 @@ We define some macros in this module, but since they're macros, they're accessib
 We also reexport all the types in this module for convenience.
 */
 
-/** Error message when trying to break with a value in a non-`loop` loop */
+/** (dev) Error message when trying to break with a value in a non-`loop` loop */
 pub const BREAKVAL_IN_NOT_LOOP :&str = "\
 	error[E0571]: `break` with value is invalid in a `for` or `while` loop. \
 	Use Break instead of BreakVal in `twist!` expression \
 	or use `twist!` with the `-val` flag.";
 
-/** Error message when trying to break without a value in a `twist -val` statement */
+/** (dev) Error message when trying to break without a value in a `twist -val` statement */
 pub const BREAK_WITHOUT_VAL :&str = "\
 	error[E0308]: mismatched types. \
 	Breaking without a value when using `twist -val`. \
 	Use BreakVal instead of Break, or use `twist!` without `-val`";
 
-/** Error message when trying to break with the wrong type in a `twist -val` statement */
+/** (dev) Error message when trying to break with the wrong type in a `twist -val` statement */
 pub const BAD_BREAKVAL_TYPE :&str = "\
 	error[E0308]: mismatched types. \
 	Looping::BreakVal has a value type different from the loop it's breaking from. \

@@ -11,7 +11,7 @@ enum AB<T, U> {
 	B(U),
 }
 
-impl<T, U> Judge for AB<T, U> {
+impl<T, U> tear::Judge for AB<T, U> {
 	type Positive = T;
 	type Negative = U;
 

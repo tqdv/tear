@@ -19,8 +19,27 @@ fn f () -> Option<i32> {
 }
 
 #[test] fn return_none () {
-
-
-
 	assert_eq![ f(), None ];
+}
+
+// Test if terror! { $e } automatically converts its argument correctly
+
+#[derive(Debug, PartialEq)]
+struct MyInt {
+	v :i32
+}
+
+impl From<i32> for MyInt {
+	fn from (v :i32) -> MyInt {
+		MyInt { v }
+	}
+}
+
+#[test] fn terror_from () {
+	fn f () -> Result<(), MyInt> {
+		terror! { Err(0) };
+		Ok(())
+	}
+	
+	assert_eq![ f(), Err(MyInt { v: 0 }) ];
 }

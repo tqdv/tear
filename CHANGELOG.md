@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] — 2020-08-03
+
+Removed `rip!` and `fear!`. Items marked as `(dev)` are no longer considered public API.
+
+### Fixed
+- `terror! { $e }` now correctly converts its argument. 
+
+### Changed
+- `From` becomes `$crate::From`. This makes the macro work even if you do not use the Rust prelude.
+- `Judge::resume_or_else` is now marked `(dev)`.
+
+### Removed
+- Legacy `rip!` and `fear!` macros (I don't even have users anyway).
+- `tear::prelude` no longer exports the Judge and Return symbols. 
+- `Judge::ret_error` as it was supposed to be `(dev)`
+
 ## [0.3.0] – 2020-05-27
 
 Make `terror!` work for booleans and add the `next_if!` and `last_if!` macros.

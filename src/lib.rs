@@ -111,7 +111,8 @@ It helps developer ego !
 # Module documentation
 
 Most things are public to allow easy modification. However, things intended only for module
-development are marked as `(dev)`.
+development are marked as `(dev)`. A breaking change in those symbols *is not* a breaking change
+in public API. Nonetheless, they will be documented in the changelog
 
 In this module, we define in order
 - ValRet, its implementation, and its associated trait Return
@@ -139,6 +140,7 @@ pub use twist_impl::{BREAKVAL_IN_NOT_LOOP, BREAK_WITHOUT_VAL, BAD_BREAKVAL_TYPE}
 pub use twist_impl::Looping;
 pub use util::gut;
 pub use trait_impl::Maru;
+pub use core::convert::From;
 
 // For convenience, also used in prelude
 use ValRet::*;
@@ -246,19 +248,7 @@ impl<Y, N> Moral<Y, N> {
 	
 	/* Special conversions */
 
-	/** Convert to a `ValRet` by mapping Good to Val, and Bad to a wrapped error (Judge trait)
-	
-	Used in the `terror!` macro when you need to wrap the Bad value into another Bad before returning it.
-	See `terror!` documentation.
-	*/
-	pub fn ret_error<O, R :Judge<Positive=O, Negative=N>> (self) -> ValRet<Y, R> {
-		match self {
-			Good(v) => Val(v),
-			Bad(v) => Ret(Judge::from_bad(v)),
-		}
-	}
-
-	/** Convert to a `Looping` by mapping Good to Resume, and Bad through a function
+	/** (dev) Convert to a `Looping` by mapping Good to Resume, and Bad through a function
 
 	The function `f` takes the bad value and maps it to a `Looping` value.
 
@@ -392,7 +382,7 @@ fn string_id(s: OsString) -> String {
 # Naming
 
 The name "tear" comes from the image of tearing apart the the usable value from the early return.
-It also happens that "tear" looks like "ret(urn)" backwards.
+It also happens to be that "tear" looks like "ret(urn)" backwards.
 */
 #[macro_export]
 macro_rules! tear {
@@ -409,7 +399,7 @@ macro_rules! tear {
 			#[allow(clippy::redundant_closure_call)]
 			match $crate::Judge::into_moral($e) {
 				$crate::Moral::Good(v) => v,
-				$crate::Moral::Bad(v) => return From::from($f(v)),
+				$crate::Moral::Bad(v) => return $crate::From::from($f(v)),
 			}
 		}
 	}
@@ -540,7 +530,7 @@ The description is especially terse on purpose: it is really hard to explain wha
 # #[macro_use] extern crate tear;
 # use tear::extra::*;
 fn return_two() -> Result<i32, String> {
-    let even_number: i32 = terror! { Good(2) };
+    let even_number: i32 = terror! { Good::<i32, String>(2) };
     # assert_eq![ even_number, 2 ];
     # Ok(even_number)
 }
@@ -706,7 +696,10 @@ The mnemonic was "When you need to scream an error from the inside" because of h
 macro_rules! terror {
 	// `terror! { $e }`
 	( $e:expr ) => {
-		$crate::tear! { $crate::Judge::into_moral($e).ret_error() }
+		match $crate::Judge::into_moral($e) {
+			$crate::Moral::Good(v) => v,
+			$crate::Moral::Bad(v) => return $crate::Judge::from_bad($crate::From::from(v)),
+		}
 	};
 	// With a mapping function eg. `terror! { $e => |v| v }` or `terror! { $e => func }`
 	( $e:expr => $f:expr ) => {
@@ -714,7 +707,7 @@ macro_rules! terror {
 			#[allow(clippy::redundant_closure_call)]
 			match $crate::Judge::into_moral($e) {
 				$crate::Moral::Good(v) => v,
-				$crate::Moral::Bad(v) => return ::tear::Judge::from_bad(From::from($f(v))),
+				$crate::Moral::Bad(v) => return $crate::Judge::from_bad($crate::From::from($f(v))),
 			}
 		}
 	}
