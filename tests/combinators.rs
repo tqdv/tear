@@ -2,6 +2,7 @@
 #![cfg(feature = "combinators")]
 
 use tear::prelude::*;
+use tear::Judge;
 use either::Either::*;
 
 #[test] fn side_works () {

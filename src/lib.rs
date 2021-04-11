@@ -224,7 +224,7 @@ impl<Y, N> Moral<Y, N> {
 		}
 	}
 
-	/** Convert to Result. Use result instead
+	/** Convert to Result. Use [`Judge::result`] instead
 
 	Maps Good to Ok and Bad to Err.
 	*/
@@ -235,7 +235,7 @@ impl<Y, N> Moral<Y, N> {
 		}
 	}
 
-	/** Convert to Result. Use side instead
+	/** Convert to Either. Use [`Judge::side`] instead
 
 	Maps Good to Right and Bad to Left.
 	*/
@@ -689,7 +689,7 @@ enum CustomError {
 
 impl std::convert::From<io::Error> for CustomError {
     fn from(x :io::Error) -> Self {
-        Self::IOError(x)
+        CustomError::IOError(x)
     }
 }
 
