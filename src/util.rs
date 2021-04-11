@@ -1,12 +1,37 @@
-/*! Utilitary macros that take too much space in the main file
+/*! Utility functions and macros
 
-Since they're macros, they're accessible from the crate root:
+Macros are accessible from the crate root:
 - `last!`, `next!`, `resume!` dirty macros
 - `anybox!`
 - (dev) `__unit!` and `__bool!`
 - (not exported) `maybe_match!`
 */
 use crate::Maru;
+
+/** Shorthand for returning a ValRet::Ret
+
+# Example
+
+```
+use tear::{ValRet, ret};
+
+fn f() -> ValRet<(), i8> {
+    if true {
+        ret!(72);
+    } else {
+        ValRet::Val(())
+    }
+}
+
+assert_eq![ f(), ValRet::Ret(72) ];
+```
+*/
+#[macro_export]
+macro_rules! ret {
+	( $($v:tt)* ) => {
+		return $crate::ValRet::Ret($($v)*);
+	}
+}
 
 /** Dirty shortcut for creating a `Looping::Break`
 
