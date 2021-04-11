@@ -6,7 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] – 2021-04-11
+
+Fix tests and prepare for Rust 2021 Edition.
+
+### Fixed
+- `tests/combinators.rs` does need `Judge` to be inscope
+- Rust 2021 Edition warnings about `panic!(...)` not called with a string literal.
+  Replaced them with `panic!("{}", ...)`.
+
+
 ## [0.5.0] – 2021-04-11
+
+`tear!` now uses the From trait, and intra-doc links are no longer experimental.
 
 ### Changed
 - `tear!` now uses the `convert::From` trait to automatically convert types like `?`
