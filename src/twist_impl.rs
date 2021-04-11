@@ -131,7 +131,7 @@ macro_rules! __impl_twist {
 	// Parse the right-hand side
 	// ...as an expression => mapping-function
 	( @parse-map [$($bk:tt)*] [$($bv:tt)*] ($e:expr => $f:expr) ) => {
-		$crate::twist! { @single [$($bk)*] [$($bv)*] ($e.into_moral().resume_or_else($f)) }
+		$crate::twist! { @single [$($bk)*] [$($bv)*] ($crate::Judge::into_moral($e).resume_or_else($f)) }
 	};
 	// ...as an expression
 	( @parse-map [$($bk:tt)*] [$($bv:tt)*] ($e:expr) ) => {
@@ -171,7 +171,7 @@ macro_rules! __impl_twist {
 	// ...as `$e => $f`
 	( @label-expr ($($flag:tt)*) [ $e:expr => $f:expr ] -> $($l:tt)* ) => {
 		// We add an extra comma, so that every label ends with a comma, simplifies parsing
-		$crate::__impl_twist! { @label-labels ($($flag)*) 0, [$($l)* ,] -> [() ()] $e.into_moral().resume_or_else($f) }
+		$crate::__impl_twist! { @label-labels ($($flag)*) 0, [$($l)* ,] -> [() ()] $crate::Judge::into_moral($e).resume_or_else($f) }
 	};
 	// ...or fail
 	( @label-expr ($($flag:tt)*) [ $($rest:tt)* ] $($whatever:tt)* ) => {
@@ -504,12 +504,12 @@ macro_rules! twist {
 		($e:expr)
 	) => {
 		match $e {
-			$( _ if $crate::__bool!($breaker)  => unreachable!(), $crate::Looping::Resume::<_, $crate::BreakValError> (v) => v, )?
+			$( _ if $crate::__bool!($breaker)  => unreachable!(), $crate::Looping::Resume::<_, $crate::BreakValError>(v) => v, )?
 			$( _ if $crate::__bool!($breakval) => unreachable!(), $crate::Looping::Resume(v) => v, )?
 			$( _ if $crate::__bool!($breaker)  => unreachable!(), $crate::Looping::Break { .. } => break $($label)?, )?
 			$( _ if $crate::__bool!($breakval) => unreachable!(), $crate::Looping::Break { .. } => panic!($crate::BREAK_WITHOUT_VAL), )?
 			$crate::Looping::Continue { .. } => continue $($($label)?)? $($($vlabel)?)?,
-			$( _ if ::tear::__bool!($breaker)  => unreachable!(), $crate::Looping::BreakVal { .. } => panic!($crate::BREAKVAL_IN_NOT_LOOP), )?
+			$( _ if $crate::__bool!($breaker)  => unreachable!(), $crate::Looping::BreakVal { .. } => panic!($crate::BREAKVAL_IN_NOT_LOOP), )?
 			$( _ if $crate::__bool!($breakval) => unreachable!(), $crate::Looping::BreakVal { value: v, .. } => break $($vlabel)? v, )?
 		}
 	};

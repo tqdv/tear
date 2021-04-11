@@ -230,8 +230,6 @@ const BREAK_0 :L = Looping::Break { label: Some(0) };
 /* Too lazy to test more than one example for map syntax */
 
 #[test] fn breakval_multiple_map () {
-	use tear::Judge;
-
 	let v :i32 = 'a: loop {
 		'b: loop {
 			let x = twist! { -label 'a :i32, 'b | Some(4) => |_| Looping::BreakVal { label: Some(0), value: 0 } };

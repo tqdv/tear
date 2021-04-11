@@ -26,10 +26,6 @@ However, they are not imported as symbols.
 pub use crate::ValRet::{self, *};
 pub use crate::Looping;
 
-// Traits (required for the macros to work)
-pub use crate::Judge as _;
-pub use crate::Return as _;
-
 // Macros
 pub use crate::{tear, terror, twist};
 pub use crate::{tear_if, anybox};
