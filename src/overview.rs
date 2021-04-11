@@ -121,4 +121,5 @@ If using the "experimental" crate feature, then you only need to implement the `
 `Judge` and `Return` trait will be automatically implemented.
 
 */
-use super::*;
+#[allow(unused_imports)]
+use super::*; // Brings symbols into scope for rustdoc links

@@ -4,9 +4,9 @@ error: expected expression, found `]`
 5   |     twist! { -label 'a | 1 + }
     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ expected expression
     |
-   ::: $WORKSPACE/src/twist_impl.rs:167:36
+   ::: $WORKSPACE/src/twist_impl.rs:168:36
     |
-167 |     ( @label-expr ($($flag:tt)*) [ $e:expr ] -> $($l:tt)* ) => {
+168 |     ( @label-expr ($($flag:tt)*) [ $e:expr ] -> $($l:tt)* ) => {
     |                                    ------- while parsing argument for this `expr` macro fragment
     |
     = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
