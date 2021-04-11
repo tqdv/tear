@@ -451,8 +451,8 @@ macro_rules! twist {
 		match $e {
 			$crate::Looping::Resume(v) => v,
 			$( $crate::Looping::Break { label: None } => { $crate::__unit!($bk); break; }, )?
-			$( $crate::Looping::Break { label: None } => { $crate::__unit!($bv); panic!($crate::BREAK_WITHOUT_VAL) }, )?
-			$( $crate::Looping::Break { label: None } => { $crate::__unit!($bx); panic!($crate::BREAK_WITHOUT_VAL) }, )?
+			$( $crate::Looping::Break { label: None } => { $crate::__unit!($bv); panic!("{}", $crate::BREAK_WITHOUT_VAL) }, )?
+			$( $crate::Looping::Break { label: None } => { $crate::__unit!($bx); panic!("{}", $crate::BREAK_WITHOUT_VAL) }, )?
 			$crate::Looping::Break { label: Some(l) } => {
 				match l {
 					$( x if x == $c => { break $l; }, )*
@@ -468,12 +468,12 @@ macro_rules! twist {
 					_ => panic!("Invalid label index in Looping::Continue object."),
 				};
 			},
-			$( $crate::Looping::BreakVal { label: None, .. } => { $crate::__unit!($bk); panic!($crate::BREAKVAL_IN_NOT_LOOP); }, )?
+			$( $crate::Looping::BreakVal { label: None, .. } => { $crate::__unit!($bk); panic!("{}", $crate::BREAKVAL_IN_NOT_LOOP); }, )?
 			$( $crate::Looping::BreakVal { label: None, value: v } => { $crate::__unit!($bv); break v; }, )?
 			$( $crate::Looping::BreakVal { label: None, value: v } => { // Unbox version
 				match v.downcast::<$bx>() {
 					Ok(v) => { break *v; },
-					_ => panic!(format!("At label None with type {}: {}", stringify!($bx), $crate::BAD_BREAKVAL_TYPE)),
+					_ => panic!("At label None with type {}: {}", stringify!($bx), $crate::BAD_BREAKVAL_TYPE),
 				};
 			}, )?
 			// Add explicit breakval type when it can't be infered by the labeled breaksvals
@@ -484,7 +484,7 @@ macro_rules! twist {
 					$( x if x == $bcount => { // Unbox version
 						match v.downcast::<$btype>() {
 							Ok(v) => { break $blabel *v; }, // We got a ref so dereference it
-							_ => panic!(format!("At label {} with type {}: {}", stringify!($blabel), stringify!($btype), $crate::BAD_BREAKVAL_TYPE)),
+							_ => panic!("At label {} with type {}: {}", stringify!($blabel), stringify!($btype), $crate::BAD_BREAKVAL_TYPE),
 						}
 					}, )*
 					_ => panic!("Invalid label index in Looping::BreakVal object."),
@@ -508,9 +508,9 @@ macro_rules! twist {
 			$( _ if $crate::__bool!($breaker)  => unreachable!(), $crate::Looping::Resume::<_, $crate::BreakValError>(v) => v, )?
 			$( _ if $crate::__bool!($breakval) => unreachable!(), $crate::Looping::Resume(v) => v, )?
 			$( _ if $crate::__bool!($breaker)  => unreachable!(), $crate::Looping::Break { .. } => break $($label)?, )?
-			$( _ if $crate::__bool!($breakval) => unreachable!(), $crate::Looping::Break { .. } => panic!($crate::BREAK_WITHOUT_VAL), )?
+			$( _ if $crate::__bool!($breakval) => unreachable!(), $crate::Looping::Break { .. } => panic!("{}", $crate::BREAK_WITHOUT_VAL), )?
 			$crate::Looping::Continue { .. } => continue $($($label)?)? $($($vlabel)?)?,
-			$( _ if $crate::__bool!($breaker)  => unreachable!(), $crate::Looping::BreakVal { .. } => panic!($crate::BREAKVAL_IN_NOT_LOOP), )?
+			$( _ if $crate::__bool!($breaker)  => unreachable!(), $crate::Looping::BreakVal { .. } => panic!("{}", $crate::BREAKVAL_IN_NOT_LOOP), )?
 			$( _ if $crate::__bool!($breakval) => unreachable!(), $crate::Looping::BreakVal { value: v, .. } => break $($vlabel)? v, )?
 		}
 	};
