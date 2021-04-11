@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] – 2021-04-11
+
+### Changed
+- `tear!` now uses the `convert::From` trait to automatically convert types like `?`
+
+### Fixed
+- `twist!` no longer requires traits to be in scope
+- `ret!` is now documented
+
+
 ## [0.4.0] — 2020-08-03
 
 Removed `rip!` and `fear!`. Items marked as `(dev)` are no longer considered public API.
@@ -22,6 +32,7 @@ Removed `rip!` and `fear!`. Items marked as `(dev)` are no longer considered pub
 - `tear::prelude` no longer exports the Judge and Return symbols. 
 - `Judge::ret_error` as it was supposed to be `(dev)`
 
+
 ## [0.3.0] – 2020-05-27
 
 Make `terror!` work for booleans and add the `next_if!` and `last_if!` macros.
@@ -37,6 +48,7 @@ Make `terror!` work for booleans and add the `next_if!` and `last_if!` macros.
 
 ### Changed
 - Use `Maru` instead of `()` in `gut` and `Judge` for `Option`
+
 
 ## [0.2.0] – 2020-05-26
 
@@ -67,6 +79,7 @@ Implemented typed loop control with `twist!`. Make `terror!` fully compatible wi
 - `or_else` and `map_ret` methods on `ValRet`. Use `result().or_else()` or `result().map_err()`
   instead
 
+
 ## [0.1.1] – 2020-05-19
 
 This release was to test if I could overwrite
@@ -75,6 +88,7 @@ Turns out you can, but the squatter is still in the list of owners and authors.
 
 ### Added
 - Licenses
+
 
 ## [0.1.0] – 2020-05-19
 

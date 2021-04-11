@@ -130,7 +130,7 @@ In this module, we define in order
 pub mod overview; // For documentation
 pub mod prelude;
 pub mod extra;
-pub mod trait_impl; // Move the trait implementions as they are quite noisy
+pub mod trait_impl; // Move the trait implementations as they are quite noisy
 pub mod twist_impl; // Currently only for `twist!`
 #[macro_use] pub mod util; // Utility macros that aren't the main focus. To reduce file size.
 
@@ -147,13 +147,14 @@ use ValRet::*;
 use Moral::*;
 #[cfg(feature = "combinators")] use either::Either::{self, *};
 
-/** Represents a usable value or an early return. Use with `tear!`
+/** Represents a usable value or an early return. Use with [`tear!`]
 
 # Description
 
 The idea is to type an early return. The early return either evaluates to something (Val) or
 returns early (Ret).
 */
+#[must_use = "Suggestion: use tear! to handle it"]
 #[derive(PartialEq, Debug, Clone)]
 pub enum ValRet<V, R> {
 	/// The usable value
@@ -164,7 +165,7 @@ pub enum ValRet<V, R> {
 
 /**
 **NB**: Other combinators such as `and`, `and_then`, `or`, `map_val`
-aren't implemented because I didn't need them and not because they aren't useful.
+aren't implemented because I didn't need them, not because they aren't useful.
 
 Examples will all use the following two variables
 ```
@@ -182,7 +183,7 @@ impl<V, R> ValRet<V, R> {
 	pub fn ret (self) -> Option<R> { maybe_match! { self, Ret(r) => r } }
 }
 
-/// Convert into ValRet
+/// Convert into [`ValRet`]
 pub trait Return where Self :Sized {
 	/// The Val in ValRet
 	type Value;
@@ -193,7 +194,7 @@ pub trait Return where Self :Sized {
 	fn into_valret (self) -> ValRet<Self::Value, Self::Returned>;
 }
 
-/// A notion of good and bad for the `terror!` macro
+/// A notion of good and bad for the [`terror!`] macro
 #[derive(PartialEq, Debug, Clone)]
 pub enum Moral<Y, N> {
 	/// The good
@@ -248,11 +249,11 @@ impl<Y, N> Moral<Y, N> {
 	
 	/* Special conversions */
 
-	/** (dev) Convert to a `Looping` by mapping Good to Resume, and Bad through a function
+	/** (dev) Convert to a [`Looping`] by mapping Good to Resume, and Bad through a function
 
 	The function `f` takes the bad value and maps it to a `Looping` value.
 
-	Used in the `twist!` macro with the mapping (`=>`) syntax. See `twist!` documentation.
+	Used in the `twist!` macro with the mapping (`=>`) syntax. See [`twist!`] documentation.
 	*/
 	pub fn resume_or_else<B> (self, f :impl FnOnce(N) -> Looping<Y, B>) -> Looping<Y, B> {
 		match self {
@@ -262,9 +263,9 @@ impl<Y, N> Moral<Y, N> {
 	}
 }
 
-/** Convert from and to Moral. Used for the macro map syntax.
+/** Convert from and to [`Moral`]. Used for the macro map syntax.
 
-This mirrors the `std::ops::Try` trait.
+This mirrors the [`ops::Try`](`core::ops::Try`) trait.
 
 It is used for the `=>` mapping syntax of macros, to differentiate the value we want to keep from
 the value we want to map through the function.
@@ -304,9 +305,9 @@ pub trait Judge :Sized {
 	}
 }
 
-/** Turns a `ValRet` into a value or an early return
+/** Turns a [`ValRet`] into a value or an early return
 
-It also coerces its argument to a ValRet (Return trait).
+It also coerces its argument to a `ValRet` ([`Return`] trait).
 
 # Description
 
@@ -326,6 +327,10 @@ let x = tear! { $e => $f }
 Same as the previous form, but the return value `r` is first mapped through $f before returning.
 In short, we return `$f(r)`.
 
+Additionally, both forms make use of the [`convert::From`](`core::convert::From`) trait to automatically convert
+the value when returning it. This behaviour is the same as the try operator `?`.
+You may need to be more specific with type annotations so that the compiler can infer the right types.
+
 # Examples
 
 tear! with Val and Ret.
@@ -335,7 +340,7 @@ tear! with Val and Ret.
 # use tear::prelude::*;
 #
 // "Ian" is assigned to name
-let name = tear! { Val("Ian") };
+let name = tear! { Val::<_, ()>("Ian") };
 # assert_eq![ name, "Ian" ];
 
 # fn func () -> i32 {
@@ -379,6 +384,23 @@ fn string_id(s: OsString) -> String {
 # assert_eq![ string_id(OsString::from("ROOT")), "4" ];
 ```
 
+Automatic conversion with `convert::From`
+
+```rust
+# use tear::prelude::*;
+#[derive(Debug, PartialEq, Eq)]
+struct MyInt(u8);
+impl std::convert::From<u8> for MyInt {
+    fn from(x :u8) -> Self { Self(x) }
+}
+
+fn five_as_myint() -> MyInt {
+    tear! { Ret(5) }
+}
+
+assert_eq![ five_as_myint(), MyInt(5) ];
+```
+
 # Naming
 
 The name "tear" comes from the image of tearing apart the the usable value from the early return.
@@ -390,7 +412,7 @@ macro_rules! tear {
 	( $e:expr ) => {
 		match $crate::Return::into_valret($e) {
 			$crate::ValRet::Val(v) => v,
-			$crate::ValRet::Ret(r) => return r,
+			$crate::ValRet::Ret(r) => return $crate::From::from(r),
 		}
 	};
 	// With a mapping function eg. `tear! { $e => |v| v }` or `tear! { $e => func }`
@@ -435,7 +457,7 @@ Early return a value: recursively computing the length of a slice.
 # #[macro_use] extern crate tear;
 fn len (v: &[i32]) -> usize {
     // Base case
-    tear_if! { v.is_empty(), 0 }
+    tear_if! { v.is_empty(), 0 as usize }
     
     // Recursion
     1 + len(&v[1..])
@@ -495,10 +517,10 @@ macro_rules! tear_if {
 	};
 }
 
-/** `try!`-like error-handling macro
+/** [`try!`]-like error-handling macro
 
 `terror!` is like `tear!`, but stronger and more righteous.
-It automatically converts the Bad value to the return type Bad value (Judge trait).
+It automatically converts the Bad value to the return type Bad value ([`Judge`] trait).
 
 # Description
 
@@ -515,6 +537,9 @@ let x = terror! { $e => $f };
 
 Same as the previous form, but the bad `value` is first mapped through $f before returning.
 In short, we return `from_bad($f(value))`.
+
+Both forms make use of the [`convert::From`](`core::convert::From`) trait to convert the bad value,
+making it fully compatible with `try!` and the `?` operator.
 
 # Explanation using examples
 
@@ -640,6 +665,46 @@ To do so, we extract the `ParseIntError`, and wrap it into our custom error with
 
 That is the role of the function following the `=>` arrow: it converts the error type of
 the left statement, into the function return error type.
+
+### Automatic conversion just like `?`
+
+Since `terror!` mimics `?`, it also supports autoconversion using the `convert::From` trait.
+
+```rust
+# use tear::prelude::*;
+# use std::io;
+# macro_rules! assert_match {
+#     ( $e:expr, $($p:pat)|+ ) => {
+#         match $e {
+#             $($p)|+ => (),
+#             ref e => panic!("assertion failed: `{:?}` does not match `{}`", e, stringify!($($p)|+)),
+#         }
+#     }
+# }
+# #[derive(Debug)]
+enum CustomError {
+    IOError(io::Error),
+    OtherError,
+}
+
+impl std::convert::From<io::Error> for CustomError {
+    fn from(x :io::Error) -> Self {
+        Self::IOError(x)
+    }
+}
+
+# fn fail_with_io_error() -> io::Result<()> {
+#     Err(io::Error::new(io::ErrorKind::Other, "oh no!"))
+# }
+#
+fn auto_convert() -> Result<bool, CustomError> {
+    terror! { fail_with_io_error() };
+    Ok(false)
+}
+
+assert_match![ auto_convert(), Err(CustomError::IOError(_)) ];
+```
+
 
 # `terror!` vs. `?` when moving into closures
 

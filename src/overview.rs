@@ -15,10 +15,10 @@ All symbols are accessible directly from the crate root as we reexport them all.
 
 # Early returns
 
-We represent an early return with `ValRet` and process it with `tear!`. The macro accepts any
-type that knows how to convert to a `ValRet` using the `Return` trait.
+We represent an early return with [`ValRet`] and process it with [`tear!`]. The macro accepts any
+type that knows how to convert to a `ValRet` using the [`Return`] trait.
 
-We use `tear!` in `tear_if!` to implement early returns as a syntax.
+We use `tear!` in [`tear_if!`] to implement early returns as a syntax.
 
 # Mapping syntax
 
@@ -36,10 +36,10 @@ This is why arguments must implement the `Judge` trait that knows how to convert
 
 # Error handling
 
-`terror!` is the error-handling macro. It depends on `Judge` to decide if the value is usable
+`terror!` is the error-handling macro. It depends on [`Judge`] to decide if the value is usable
 or not.
 
-A short way of discarding the error value in a function returning `Option<T>`, is to use the `gut`
+A short way of discarding the error value in a function returning `Option<T>`, is to use the [`gut`]
 function:
 
 ```
@@ -52,7 +52,7 @@ fn f () -> Option<i32> {
 ```
 
 If you need to do some things before returning `None`, use a block, and return `tear::Maru` at the
-end. `Maru` is the placeholder type used to represent the bad value of `Option<T>`, or the good
+end. [`Maru`] is the placeholder type used to represent the bad value of `Option<T>`, or the good
 and bad values of `bool`.
 
 # Loop control
@@ -70,8 +70,8 @@ assert_eq![ x, 3 ];
 ```
 
 In the complex case where you want to breakval from multiple loops with a different type, you can
-use `Box<dyn Any>` to hide those type. We provide the `anybox!` macro to take the concrete type,
-and wrap it into a `Box<dyn Any>` object. See `twist!` documentation for more information.
+use `Box<dyn Any>` to hide those type. We provide the [`anybox!`] macro to take the concrete type,
+and wrap it into a `Box<dyn Any>` object. See [`twist!`] documentation for more information.
 
 ```
 use tear::prelude::*;
@@ -88,7 +88,7 @@ assert_eq![ x, 3 ];
 ```
 
 For simple cases where you only break from one loop (ie. when you don't use `-labels`), you can
-use the `last!`, `next!`, and `resume!` as shortcuts for the right-hand side of `twist!`:
+use the [`last!`], [`next!`], and [`resume!`] as shortcuts for the right-hand side of `twist!`:
 
 ```
 use tear::extra::*;
@@ -98,13 +98,8 @@ loop {
 }
 ```
 
-There's also `next_if!` and `last_if!` macros that continue or break the loop based on a condition
+There's also [`next_if!`] and [`last_if!`] macros that continue or break the loop based on a condition
 or a pattern match.
-
-# Legacy
-
-`rip!` is an alias for `terror!`, and `fear!` is an alias for `tear!`. This is because mapping
-syntax and normal syntax used to separate.
 
 # Add functionality to your own types
 
@@ -126,3 +121,4 @@ If using the "experimental" crate feature, then you only need to implement the `
 `Judge` and `Return` trait will be automatically implemented.
 
 */
+use super::*;

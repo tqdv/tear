@@ -28,8 +28,8 @@ impl<T, U> tear::Judge for AB<T, U> {
 
 #[test] fn judge_to_return () {
 	fn f () -> i32 {
-		tear! { AB::A(5) };
-		tear! { AB::B(6) };
+		tear! { AB::A::<_, i32>(5) };
+		tear! { AB::B::<_, i32>(6) };
 		0
 	}
 	assert_eq![ f(), 6 ];

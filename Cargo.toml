@@ -1,7 +1,7 @@
 [package]
 name = "tear"
 description = "Typed early returns and loop control + Syntax sugar for try!-like error handling"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Tilwa Qendov <tilwa.qendov@gmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"

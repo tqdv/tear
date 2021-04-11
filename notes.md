@@ -1,15 +1,19 @@
 # Notes
 
+## TODO
+
+Nothing currently
+
+## Thoughts
+
 - `Moral` is not meant to be manipulated, nor is `ValRet`. If you need combinators,
   use `Judge`'s side or result methods.
 - If there's a use-case where Judge -> Return blanket trait implementation poses a problem, I should
   replace it with a macro. Also, if auto traits get stabilized, we could let the user disable it.
-- I should probably use proc_macros instead of abusing macros for `__impl_twist!`, but I don't know how
+- I should probably use proc\_macros instead of abusing macros for `__impl_twist!`, but I don't know how
   to write one, and docs aren't easily found.
 - Convenience functions are named shortly and memorable. Trait functions are named boringly and at least
   two words.
-
-## TODO
 
 ## Useful resources
 - <https://stackoverflow.com/questions/40302026/what-does-the-tt-metavariable-type-mean-in-rust-macros>

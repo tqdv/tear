@@ -1,8 +1,9 @@
 /*! (dev) `twist!` implementation
 
-We define some macros in this module, but since they're macros, they're accessible from the crate root:
-- `__impl_twist`
+We also define some macros in this module, but since they're macros, they're accessible from the crate root:
+- (dev) `__impl_twist`
 - `twist!`
+- `next_if!` and `last_if!`
 
 We also reexport all the types in this module for convenience.
 */
@@ -45,7 +46,7 @@ because the type name is too long.
 */
 pub type BreakValError = Error0571__Tried_to_break_with_value_using_twist_without_val_flag__Use_Break_instead_of_BreakVal_or_add_the_dash_val_flag_to_twist;
 
-/** Different loop control signals that `twist!` understands
+/** Different loop control signals that [`twist!`] understands
 
 We map `break`, `break $value` and `continue` to types.
 */
@@ -210,7 +211,7 @@ macro_rules! __impl_twist {
 	};
 }
 
-/** Breaks loops (or not) based on the `Looping` variant
+/** Breaks loops (or not) based on the [`Looping`] variant
 
 # Usage
 
@@ -390,8 +391,8 @@ See more barebones examples for breaking multiple loops in `test/label.rs`.
 
 # See also
 
-- The `last!`, `next!` and `resume!` utility macros.
-- The `anybox!` macro when the expression is of type `Box<dyn Any>` and we unbox it
+- The [`last!`], [`next!`] and [`resume!`] utility macros.
+- The [`anybox!`] macro when the expression is of type `Box<dyn Any>` and we unbox it
 
 # Developer docs
 
@@ -562,8 +563,8 @@ assert_eq![ sum, 9 ];
 ```
 
 # See also
-- `tear_if!` with examples
-- `last_if!`
+- [`tear_if!`] with examples
+- [`last_if!`]
 */
 #[macro_export]
 macro_rules! next_if {
@@ -621,8 +622,8 @@ assert_eq![ sum, 15 ];
 ```
 
 # See also
-- `tear_if!` with examples
-- `next_if!`
+- [`tear_if!`] with examples
+- [`next_if!`]
 */
 #[macro_export]
 macro_rules! last_if {

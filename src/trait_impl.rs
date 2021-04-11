@@ -15,7 +15,7 @@ use crate::*;
 
 /** A placeholder type with a single value ◯
 
-It mirrors the `NoneError` type. For example, it is used in conjunction with `Moral` to
+It mirrors the [`NoneError`](`core::option::NoneError`) type. For example, it is used in conjunction with [`Moral`] to
 represent the bad types for `bool` or `Option<T>`.
 
 # Examples
@@ -39,7 +39,7 @@ fn f() -> () {
 
 # See also
 
-- the `gut` function, that takes over the right-hand side
+- the [`gut`] function, that takes over the right-hand side
 */
 #[derive(Copy, Debug, Clone)]
 pub struct Maru;

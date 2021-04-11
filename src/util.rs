@@ -39,7 +39,7 @@ macro_rules! ret {
 
 If called with no arguments, it breaks the current loop.
 
-If called with the label index, it breaks the corresponding loop (see `twist!`).
+If called with the label index, it breaks the corresponding loop (see [`twist!`]).
 
 Used for writing short `twist!` statements that break from an enclosing loop. See examples.
 
@@ -70,7 +70,7 @@ It is named after the equivalent of break in Perl. `break` is a keyword so we ca
 the macro `break!` unless we use `r#break!`.
 
 # See also
-- `last_if!`
+- [`last_if!`]
 */
 #[macro_export] macro_rules! last {
 	() => { $crate::Looping::Break::<_, $crate::BreakValError> { label: None } };
@@ -125,7 +125,7 @@ It is named after the equivalent of continue in Perl. `continue` is a keyword so
 the macro `continue!` unless we use `r#continue!`.
 
 # See also
-- `next_if!`
+- [`next_if!`]
 */
 #[macro_export] macro_rules! next {
 	() => { $crate::Looping::Continue::<_, $crate::BreakValError> { label: None } };
@@ -270,9 +270,9 @@ macro_rules! maybe_match {
 	}
 }
 
-/** Always returns `Maru`
+/** Always returns [`Maru`]
 
-This function is used with `terror!` to return None, where you would use `.ok()?.unwrap()` instead.
+This function is used with [`terror!`] to return None, where you would use `.ok()?.unwrap()` instead.
 
 ```
 # use tear::prelude::*;
